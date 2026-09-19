@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pv-navy: #0A0A31;
+  --color-pv-navy-light: #000000;
+  --color-pv-silver: #CACACB;
+  --color-pv-silver-light: #E9EDF5;
+  --color-pv-gold: #E2B87C;
+  --color-pv-gold-light: #8C8D8D;
+  --font-sans: "Noto Serif", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+@layer utilities {
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  .animate-shimmer {
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+body {
+  @apply bg-[#FAF8F4] text-[#3E3A35] min-h-screen font-serif antialiased selection:bg-[#E2B87C] selection:text-white;
+}

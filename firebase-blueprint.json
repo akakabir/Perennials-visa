@@ -1,0 +1,104 @@
+{
+  "schema": {
+    "visaPlans": {
+      "type": "collection",
+      "description": "Visa plans available for users",
+      "schema": {
+        "id": "string",
+        "name": "string",
+        "destinationCountry": "string",
+        "flag": "string",
+        "description": "string",
+        "requirements": "array",
+        "processingTime": "string",
+        "featured": "boolean",
+        "status": "string",
+        "prices": "array"
+      }
+    },
+    "applications": {
+      "type": "collection",
+      "description": "User visa applications",
+      "schema": {
+        "id": "string",
+        "referenceId": "string",
+        "name": "string",
+        "email": "string",
+        "phone": "string",
+        "planId": "string",
+        "submittedDate": "string",
+        "status": "string",
+        "adminNote": "string"
+      }
+    },
+    "reviews": {
+      "type": "collection",
+      "description": "User reviews",
+      "schema": {
+        "id": "string",
+        "name": "string",
+        "rating": "number",
+        "comment": "string",
+        "country": "string",
+        "status": "string",
+        "date": "string"
+      }
+    },
+    "processSteps": {
+      "type": "collection",
+      "description": "Process steps for the how it works section",
+      "schema": {
+        "id": "string",
+        "title": "string",
+        "description": "string",
+        "time": "string",
+        "order": "number"
+      }
+    },
+    "siteSettings": {
+      "type": "collection",
+      "description": "Global site settings",
+      "schema": {
+        "id": "string",
+        "phone": "string",
+        "whatsapp": "string",
+        "instagram": "string",
+        "email": "string",
+        "address": "string",
+        "heroHeadline": "string",
+        "heroSubheading": "string",
+        "aboutBlurb": "string",
+        "footerText": "string",
+        "companyName": "string",
+        "logoUrl": "string"
+      }
+    }
+  },
+  "securityRules": {
+    "roles": {
+      "admin": "request.auth != null"
+    },
+    "rules": {
+      "visaPlans": {
+        "read": "true",
+        "write": "isAdmin()"
+      },
+      "applications": {
+        "read": "true",
+        "write": "true"
+      },
+      "reviews": {
+        "read": "true",
+        "write": "true"
+      },
+      "processSteps": {
+        "read": "true",
+        "write": "isAdmin()"
+      },
+      "siteSettings": {
+        "read": "true",
+        "write": "isAdmin()"
+      }
+    }
+  }
+}

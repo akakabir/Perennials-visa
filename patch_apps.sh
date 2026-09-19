@@ -1,0 +1,2 @@
+sed -i 's/import { Search } from '\''lucide-react'\'';/import { Search, Mail } from '\''lucide-react'\'';\nimport { useNavigate } from '\''react-router-dom'\'';/g' src/pages/admin/ApplicationsManager.tsx
+sed -i '/const handleNoteChange = /i \  const navigate = useNavigate();\n  const handleSendEmail = (appId: string) => navigate('\''\/admin\/emails'\'', { state: { selectedApplicant: appId, recipientType: '\''applicant'\'' } });' src/pages/admin/ApplicationsManager.tsx

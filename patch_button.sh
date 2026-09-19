@@ -1,0 +1,1 @@
+sed -i 's/interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {/export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> \& {\n  variant?: '\''primary'\'' | '\''secondary'\'' | '\''outline'\'' | '\''ghost'\'';\n  size?: '\''sm'\'' | '\''md'\'' | '\''lg'\'';\n}/g' src/components/Button.tsx

@@ -1,0 +1,8 @@
+{
+  "name": "Perennials Visa",
+  "description": "A premium visa consultancy brand application.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

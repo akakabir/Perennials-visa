@@ -1,0 +1,1 @@
+sed -i 's/{ name: '\''Application History'\'', path: '\''\/admin\/application-history'\'', icon: Users },/{ name: '\''Application History'\'', path: '\''\/admin\/application-history'\'', icon: Archive },/g' src/pages/admin/Layout.tsx

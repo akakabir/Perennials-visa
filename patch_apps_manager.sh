@@ -1,0 +1,1 @@
+sed -i 's/const filteredApps = applications.filter(a =>/const activeApps = applications.filter(a => !a.archived);\n  const filteredApps = activeApps.filter(a =>/g' src/pages/admin/ApplicationsManager.tsx
