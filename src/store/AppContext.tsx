@@ -40,13 +40,49 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const DEFAULT_PLANS: VisaPlan[] = [
+  { id: 'schengen', name: 'Schengen', description: 'Access 27 European countries with a single visa. Ideal for tourism and short-stay business.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 500, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Photos', 'Bank Statement'] },
+  { id: 'japan', name: 'Japan', description: 'Experience the culture and beauty of Japan. We handle all documentation for your tourist visa.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 450, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Photos', 'Flight Details'] },
+  { id: 'uk', name: 'UK', description: 'Visit the United Kingdom for tourism or short business trips with our expert guidance.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 650, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Financials', 'Accommodation'] },
+  { id: 'us', name: 'US', description: 'B1/B2 Visitor visa assistance for the United States, including DS-160 filling and interview prep.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 800, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Photo', 'DS-160'] },
+  { id: 'canada', name: 'Canada', description: 'Canadian Visitor Visa (Temporary Resident Visa) application support for seamless travel.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 600, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Financials', 'Travel History'] },
+  { id: 'australia', name: 'Australia', description: 'Visit Australia for holidays or business. We assist with Subclass 600 applications.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 550, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Bank Statement', 'Employment Letter'] },
+];
+
+const DEFAULT_SETTINGS: SiteSettings = {
+  siteName: 'Perennials Visa',
+  logoUrl: '/logo.png',
+  phone: '+971 50 123 4567',
+  whatsapp: '971501234567',
+  instagram: 'perennials.visa',
+  email: 'info@perennialsvisa.com',
+  address: 'Dubai, UAE',
+  heroHeadline: 'Your Gateway to Global Horizons',
+  heroSubheading: 'Expert visa consultancy for individuals and businesses worldwide.',
+  aboutBlurb: 'We provide seamless visa processing with a high success rate.',
+  footerText: '© 2026 Perennials Visa. All rights reserved.',
+  admins: [{ name: 'Admin', email: 'admin1', passwordHash: 'Perennial1@', role: 'admin', status: 'active' }],
+  forgotPasswordCode: 'didyouknowthatthiswebsitewasmadebyathirteenyearold'
+};
+
+const DEFAULT_TEMPLATES: EmailTemplate[] = [
+  { id: 't1', name: 'Assessment - Not Recommended to Proceed', subject: 'Visa Assessment Update - {{referenceId}}', body: 'Hello {{applicantName}},\n\nThank you for allowing Perennials to review your visa profile.\n\nBased on the information currently available, we are unable to recommend proceeding with the visa application at this stage.\n\nThis assessment is based on the information provided and does not represent a decision by the relevant immigration authority.\n\nIf your circumstances change or additional supporting documents become available, we can review your profile again.\n\nRegards,\nPerennials\n\n{{companyEmail}}\n{{companyPhone}}' },
+  { id: 't2', name: 'Assessment - You Can Proceed', subject: 'Visa Assessment - Next Steps', body: 'Hello {{applicantName}},\n\nThank you for choosing Perennials.\n\nBased on the information currently available, your profile can proceed to the next stage of the visa application process.\n\nPlease note that this assessment does not guarantee visa approval. The final decision is made by the relevant immigration authority.\n\nTo continue with the process, the required service payment must be completed.\n\nOnce payment is confirmed, we can proceed with the next steps and required documentation.\n\nApplication Reference:\n{{referenceId}}\n\nDestination:\n{{destination}}\n\nRegards,\nPerennials\n\n{{companyEmail}}\n{{companyPhone}}' }
+];
+
+const DEFAULT_STEPS: ProcessStep[] = [
+  { id: '1', title: "Choose Plan", description: "Select your destination and visa type.", time: "1-2 Days", order: 1 },
+  { id: '2', title: "Submit Docs", description: "Upload requirements securely online.", time: "1 Day", order: 2 },
+  { id: '3', title: "We Process", description: "Our experts review and file your case.", time: "3-5 Days", order: 3 }
+];
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [visaPlans, setVisaPlans] = useState<VisaPlan[]>([]);
+  const [visaPlans, setVisaPlans] = useState<VisaPlan[]>(DEFAULT_PLANS);
   const [applications, setApplications] = useState<Application[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
-  const [processSteps, setProcessSteps] = useState<ProcessStep[]>([]);
-  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
+  const [processSteps, setProcessSteps] = useState<ProcessStep[]>(DEFAULT_STEPS);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(DEFAULT_TEMPLATES);
   const [emailDrafts, setEmailDrafts] = useState<EmailDraft[]>([]);
   const [emailHistory, setEmailHistory] = useState<EmailRecord[]>([]);
   const [adminEmail, setAdminUsernameState] = useState<string | null>(() => sessionStorage.getItem('pv_adminEmail'));
@@ -65,82 +101,109 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const unsubscribePlans = onSnapshot(collection(db, 'visaPlans'), (snapshot) => {
-      if (snapshot.empty) {
-        const defaultPlans: VisaPlan[] = [
-          { id: 'schengen', name: 'Schengen', description: 'Access 27 European countries with a single visa. Ideal for tourism and short-stay business.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 500, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Photos', 'Bank Statement'] },
-          { id: 'japan', name: 'Japan', description: 'Experience the culture and beauty of Japan. We handle all documentation for your tourist visa.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 450, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Photos', 'Flight Details'] },
-          { id: 'uk', name: 'UK', description: 'Visit the United Kingdom for tourism or short business trips with our expert guidance.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 650, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Financials', 'Accommodation'] },
-          { id: 'us', name: 'US', description: 'B1/B2 Visitor visa assistance for the United States, including DS-160 filling and interview prep.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 800, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Photo', 'DS-160'] },
-          { id: 'canada', name: 'Canada', description: 'Canadian Visitor Visa (Temporary Resident Visa) application support for seamless travel.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 600, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Financials', 'Travel History'] },
-          { id: 'australia', name: 'Australia', description: 'Visit Australia for holidays or business. We assist with Subclass 600 applications.', featured: true, destinationCountry: '', flag: '', processingTime: '', status: 'active', prices: [{ currencyCode: 'AED', amount: 550, currencySymbol: 'AED', country: '', note: '' }], requirements: ['Passport', 'Bank Statement', 'Employment Letter'] },
-        ];
-        defaultPlans.forEach(plan => setDoc(doc(db, 'visaPlans', plan.id), plan));
+    const unsubscribePlans = onSnapshot(
+      collection(db, 'visaPlans'),
+      (snapshot) => {
+        if (snapshot.empty) {
+          DEFAULT_PLANS.forEach(plan => setDoc(doc(db, 'visaPlans', plan.id), plan).catch(() => {}));
+          setVisaPlans(DEFAULT_PLANS);
+        } else {
+          setVisaPlans(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as VisaPlan)));
+        }
+      },
+      (err) => {
+        console.warn('Firestore visaPlans listener notice:', err.message);
       }
-      setVisaPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VisaPlan)));
-    });
+    );
 
-    const unsubscribeApps = onSnapshot(collection(db, 'applications'), (snapshot) => {
-      setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application)));
-    });
-
-    const unsubscribeReviews = onSnapshot(collection(db, 'reviews'), (snapshot) => {
-      setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
-    });
-
-    const unsubscribeSettings = onSnapshot(doc(db, 'siteSettings', 'global'), (docSnap) => {
-      if (docSnap.exists()) {
-        setSiteSettings({ id: docSnap.id, ...docSnap.data() } as unknown as SiteSettings);
-      } else {
-
-        setSiteSettings({
-          siteName: 'Perennials Visa',
-          logoUrl: '/logo.png',
-          phone: '+971 50 123 4567',
-          whatsapp: '971501234567',
-          instagram: 'perennials.visa',
-          email: 'info@perennialsvisa.com',
-          address: 'Dubai, UAE',
-          heroHeadline: 'Your Gateway to Global Horizons',
-          heroSubheading: 'Expert visa consultancy for individuals and businesses worldwide.',
-          aboutBlurb: 'We provide seamless visa processing with a high success rate.',
-          footerText: '© 2026 Perennials Visa. All rights reserved.',
-          admins: [{ name: 'Admin', email: 'admin1', passwordHash: 'Perennial1@', role: 'admin', status: 'active' }], forgotPasswordCode: 'didyouknowthatthiswebsitewasmadebyathirteenyearold'
-        });
+    const unsubscribeApps = onSnapshot(
+      collection(db, 'applications'),
+      (snapshot) => {
+        setApplications(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Application)));
+      },
+      (err) => {
+        console.warn('Firestore applications listener notice:', err.message);
       }
-    });
+    );
 
-    const unsubscribeEmailTemplates = onSnapshot(collection(db, 'emailTemplates'), (snapshot) => {
-      if (snapshot.empty) {
-        const defaultTemplates: EmailTemplate[] = [
-          { id: 't1', name: 'Assessment - Not Recommended to Proceed', subject: 'Visa Assessment Update - {{referenceId}}', body: 'Hello {{applicantName}},\n\nThank you for allowing Perennials to review your visa profile.\n\nBased on the information currently available, we are unable to recommend proceeding with the visa application at this stage.\n\nThis assessment is based on the information provided and does not represent a decision by the relevant immigration authority.\n\nIf your circumstances change or additional supporting documents become available, we can review your profile again.\n\nRegards,\nPerennials\n\n{{companyEmail}}\n{{companyPhone}}' },
-          { id: 't2', name: 'Assessment - You Can Proceed', subject: 'Visa Assessment - Next Steps', body: 'Hello {{applicantName}},\n\nThank you for choosing Perennials.\n\nBased on the information currently available, your profile can proceed to the next stage of the visa application process.\n\nPlease note that this assessment does not guarantee visa approval. The final decision is made by the relevant immigration authority.\n\nTo continue with the process, the required service payment must be completed.\n\nOnce payment is confirmed, we can proceed with the next steps and required documentation.\n\nApplication Reference:\n{{referenceId}}\n\nDestination:\n{{destination}}\n\nRegards,\nPerennials\n\n{{companyEmail}}\n{{companyPhone}}' }
-        ];
-        defaultTemplates.forEach(template => setDoc(doc(db, 'emailTemplates', template.id), template));
+    const unsubscribeReviews = onSnapshot(
+      collection(db, 'reviews'),
+      (snapshot) => {
+        setReviews(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Review)));
+      },
+      (err) => {
+        console.warn('Firestore reviews listener notice:', err.message);
       }
-      setEmailTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmailTemplate)));
-    });
-    const unsubscribeEmailDrafts = onSnapshot(collection(db, 'emailDrafts'), (snapshot) => {
-      setEmailDrafts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmailDraft)));
-    });
-    const unsubscribeEmailHistory = onSnapshot(collection(db, 'emailHistory'), (snapshot) => {
-      const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmailRecord));
-      records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setEmailHistory(records);
-    });
-    const unsubscribeSteps = onSnapshot(collection(db, 'processSteps'), (snapshot) => {
-      if (snapshot.empty) {
-        const defaultSteps: ProcessStep[] = [
-          { id: '1', title: "Choose Plan", description: "Select your destination and visa type.", time: "1-2 Days", order: 1 },
-          { id: '2', title: "Submit Docs", description: "Upload requirements securely online.", time: "1 Day", order: 2 },
-          { id: '3', title: "We Process", description: "Our experts review and file your case.", time: "3-5 Days", order: 3 }
-        ];
-        defaultSteps.forEach(step => setDoc(doc(db, 'processSteps', step.id), step));
+    );
+
+    const unsubscribeSettings = onSnapshot(
+      doc(db, 'siteSettings', 'global'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setSiteSettings({ id: docSnap.id, ...docSnap.data() } as unknown as SiteSettings);
+        } else {
+          setDoc(doc(db, 'siteSettings', 'global'), DEFAULT_SETTINGS).catch(() => {});
+          setSiteSettings(DEFAULT_SETTINGS);
+        }
+      },
+      (err) => {
+        console.warn('Firestore siteSettings listener notice:', err.message);
       }
-      const steps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProcessStep));
-      steps.sort((a, b) => a.order - b.order);
-      setProcessSteps(steps);
-    });
+    );
+
+    const unsubscribeEmailTemplates = onSnapshot(
+      collection(db, 'emailTemplates'),
+      (snapshot) => {
+        if (snapshot.empty) {
+          DEFAULT_TEMPLATES.forEach(template => setDoc(doc(db, 'emailTemplates', template.id), template).catch(() => {}));
+          setEmailTemplates(DEFAULT_TEMPLATES);
+        } else {
+          setEmailTemplates(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailTemplate)));
+        }
+      },
+      (err) => {
+        console.warn('Firestore emailTemplates listener notice:', err.message);
+      }
+    );
+
+    const unsubscribeEmailDrafts = onSnapshot(
+      collection(db, 'emailDrafts'),
+      (snapshot) => {
+        setEmailDrafts(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailDraft)));
+      },
+      (err) => {
+        console.warn('Firestore emailDrafts listener notice:', err.message);
+      }
+    );
+
+    const unsubscribeEmailHistory = onSnapshot(
+      collection(db, 'emailHistory'),
+      (snapshot) => {
+        const records = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailRecord));
+        records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setEmailHistory(records);
+      },
+      (err) => {
+        console.warn('Firestore emailHistory listener notice:', err.message);
+      }
+    );
+
+    const unsubscribeSteps = onSnapshot(
+      collection(db, 'processSteps'),
+      (snapshot) => {
+        if (snapshot.empty) {
+          DEFAULT_STEPS.forEach(step => setDoc(doc(db, 'processSteps', step.id), step).catch(() => {}));
+          setProcessSteps(DEFAULT_STEPS);
+        } else {
+          const steps = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ProcessStep));
+          steps.sort((a, b) => a.order - b.order);
+          setProcessSteps(steps);
+        }
+      },
+      (err) => {
+        console.warn('Firestore processSteps listener notice:', err.message);
+      }
+    );
 
     return () => {
       unsubscribePlans();
@@ -217,7 +280,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       updateApplication, addApplication, deleteApplication, updateReview, addReview, deleteReview, updateSiteSettings,
       updateProcessStep, addProcessStep, deleteProcessStep, updateEmailTemplate, addEmailTemplate, deleteEmailTemplate, updateEmailDraft, addEmailDraft, deleteEmailDraft, addEmailRecord, deleteEmailRecord
     };
-  }, [visaPlans, applications, reviews, siteSettings, processSteps, adminLoggedIn]);
+  }, [visaPlans, applications, reviews, siteSettings, processSteps, adminLoggedIn, emailTemplates, emailDrafts, emailHistory, adminEmail]);
 
   if (!siteSettings || !contextValue) {
     return (

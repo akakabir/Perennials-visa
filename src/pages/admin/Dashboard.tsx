@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, FileText, MessageSquare, Star } from 'lucide-react';
+import { Users, FileText, MessageSquare, Star, Globe2 } from 'lucide-react';
 import { useAppContext } from '../../store/AppContext';
 import { Link } from 'react-router-dom';
 
@@ -83,5 +83,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-import { Globe2 } from 'lucide-react';

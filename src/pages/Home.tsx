@@ -32,6 +32,8 @@ export default function Home() {
   const [showWhatsAppPreview, setShowWhatsAppPreview] = useState(true);
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [submittedRef, setSubmittedRef] = useState<string | null>(null);
+  const [submittedMode, setSubmittedMode] = useState<'whatsapp' | 'card'>('whatsapp');
+  const [formError, setFormError] = useState('');
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
 
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -115,6 +117,7 @@ Please let me know the document checklist and how we can proceed with this appli
     const cleanPhone = rawPhone.replace(/\D/g, '');
     const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
+    setSubmittedMode('whatsapp');
     setSubmittedRef(refId);
   };
 
@@ -127,6 +130,8 @@ Please let me know the document checklist and how we can proceed with this appli
   const handleCloseModal = () => {
     setCheckoutPlan(null);
     setSubmittedRef(null);
+    setSubmittedMode('whatsapp');
+    setFormError('');
     setApplicantName('');
     setApplicantEmail('');
     setApplicantPhone('');
@@ -160,26 +165,42 @@ Please let me know the document checklist and how we can proceed with this appli
 
               {submittedRef ? (
                 <div className="text-center py-6 space-y-4">
-                  <div className="w-16 h-16 bg-[#25D366]/10 text-[#25D366] rounded-full flex items-center justify-center mx-auto mb-2 border border-[#25D366]/30">
-                    <MessageCircle className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-[#3E3A35]">WhatsApp Inquiry Launched!</h3>
-                  <p className="text-sm text-[#7A7369] max-w-md mx-auto">
-                    Your complete visa plan inquiry and details have been formatted and sent to WhatsApp. Our visa consultant will assist you promptly.
-                  </p>
+                  {submittedMode === 'whatsapp' ? (
+                    <>
+                      <div className="w-16 h-16 bg-[#25D366]/10 text-[#25D366] rounded-full flex items-center justify-center mx-auto mb-2 border border-[#25D366]/30">
+                        <MessageCircle className="w-8 h-8" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-[#3E3A35]">WhatsApp Inquiry Launched!</h3>
+                      <p className="text-sm text-[#7A7369] max-w-md mx-auto">
+                        Your complete visa plan inquiry and details have been formatted and sent to WhatsApp. Our visa consultant will assist you promptly.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 border border-emerald-200">
+                        <CheckCircle className="w-8 h-8" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-[#3E3A35]">Application Submitted!</h3>
+                      <p className="text-sm text-[#7A7369] max-w-md mx-auto">
+                        Thank you for your application. Our dedicated visa specialists have received your submission and will contact you promptly to finalize document verification and processing.
+                      </p>
+                    </>
+                  )}
                   <div className="bg-[#F0EEE9] border border-[#E6DFD5] rounded-2xl p-4 inline-block text-left my-2 w-full max-w-sm">
                     <div className="text-xs text-[#7A7369]">Application Reference:</div>
                     <div className="font-mono text-lg font-bold text-[#3E3A35]">{submittedRef}</div>
                     <div className="text-xs text-[#7A7369]/80 mt-1">Visa Plan: {checkoutPlan.name} {checkoutPlan.flag}</div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <button
-                      onClick={() => handleSendWhatsApp(checkoutPlan)}
-                      className="flex-1 h-11 bg-[#25D366] hover:bg-[#20bd5a] text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Re-open WhatsApp
-                    </button>
+                    {submittedMode === 'whatsapp' && (
+                      <button
+                        onClick={() => handleSendWhatsApp(checkoutPlan)}
+                        className="flex-1 h-11 bg-[#25D366] hover:bg-[#20bd5a] text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Re-open WhatsApp
+                      </button>
+                    )}
                     <button
                       onClick={handleCloseModal}
                       className="flex-1 h-11 bg-white border border-[#D9CFBE] text-[#3E3A35] hover:bg-[#F0EEE9] font-medium rounded-xl transition-all"
@@ -274,13 +295,21 @@ Please let me know the document checklist and how we can proceed with this appli
                   </div>
 
                   {/* Applicant Info Form Inputs */}
+                  {formError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl">
+                      {formError}
+                    </div>
+                  )}
                   <div className="space-y-3 mb-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-[#7A7369] mb-1">Full Name</label>
                         <input
                           value={applicantName}
-                          onChange={(e) => setApplicantName(e.target.value)}
+                          onChange={(e) => {
+                            setApplicantName(e.target.value);
+                            if (formError) setFormError('');
+                          }}
                           type="text"
                           className="w-full bg-white border border-[#D9CFBE] rounded-xl px-3.5 py-2 text-sm text-[#3E3A35] outline-none focus:border-[#E2B87C] placeholder-[#7A7369]/40"
                           placeholder="e.g. John Doe"
@@ -399,31 +428,40 @@ Please let me know the document checklist and how we can proceed with this appli
                     <form onSubmit={async (e) => {
                       e.preventDefault();
                       if (!applicantName.trim()) {
-                        alert('Please enter your full name');
+                        setFormError('Please enter your full name');
                         return;
                       }
+                      setFormError('');
+                      setIsSubmittingApp(true);
                       const id = Date.now().toString();
                       const refId = `APP-${id.slice(-6)}`;
-                      await addApplication({
-                        id,
-                        referenceId: refId,
-                        name: applicantName,
-                        email: applicantEmail || 'not-provided@example.com',
-                        phone: applicantPhone || 'Not provided',
-                        planId: checkoutPlan.id,
-                        submittedDate: new Date().toISOString(),
-                        status: 'Submitted',
-                        adminNote: `Online Card Application for ${checkoutPlan.name} (${selectedCurrency}). Notes: ${applicantNotes.trim() || 'None'}`
-                      });
-                      alert(`Success! Application ${refId} submitted. In production, this redirects to the payment processor.`);
-                      handleCloseModal();
+                      try {
+                        await addApplication({
+                          id,
+                          referenceId: refId,
+                          name: applicantName.trim(),
+                          email: applicantEmail.trim() || 'not-provided@example.com',
+                          phone: applicantPhone.trim() || 'Not provided',
+                          planId: checkoutPlan.id,
+                          submittedDate: new Date().toISOString(),
+                          status: 'Submitted',
+                          adminNote: `Online Card Application for ${checkoutPlan.name} (${selectedCurrency}). Notes: ${applicantNotes.trim() || 'None'}`
+                        });
+                        setSubmittedMode('card');
+                        setSubmittedRef(refId);
+                      } catch (err) {
+                        console.error('Error submitting application:', err);
+                        setFormError('Failed to submit application. Please try again or inquire via WhatsApp.');
+                      } finally {
+                        setIsSubmittingApp(false);
+                      }
                     }} className="space-y-4">
                       <div className="p-4 bg-[#F0EEE9] rounded-xl border border-[#E6DFD5] text-xs text-[#7A7369] text-center">
                         Secured with 256-bit encryption. Payment processing provided via Stripe.
                       </div>
-                      <Button type="submit" className="w-full h-12 flex items-center justify-center gap-2">
+                      <Button type="submit" disabled={isSubmittingApp} className="w-full h-12 flex items-center justify-center gap-2">
                         <CreditCard className="w-4 h-4" />
-                        Pay and Submit Application Online
+                        {isSubmittingApp ? 'Submitting Application...' : 'Pay and Submit Application Online'}
                       </Button>
                     </form>
                   )}
@@ -557,24 +595,12 @@ Please let me know the document checklist and how we can proceed with this appli
                       ))}
                     </ul>
                   </div>
-                  <div className="p-4 border-t border-[#E6DFD5] bg-[#F0EEE9] flex items-stretch gap-2">
-                    <Button onClick={() => setCheckoutPlan(plan)} className="flex-1">
+                  <div className="p-4 border-t border-[#E6DFD5] bg-[#F0EEE9]">
+                    <Button onClick={() => setCheckoutPlan(plan)} className="w-full">
                       <ArrowRight className="w-4 h-4 text-white/40 group-hover:text-white/80 transition-colors" />
                       <span className="flex-1 text-center">Select Plan</span>
                       <Plane className="w-5 h-5 text-white/40 group-hover:text-white/80 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-300" />
                     </Button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCheckoutPlan(plan);
-                        setModalTab('whatsapp');
-                      }}
-                      className="px-4 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-2xl flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm hover:shadow transition-all shrink-0 self-stretch"
-                      title="Inquire & send via WhatsApp with complete visa plan details"
-                    >
-                      <MessageCircle className="w-4 h-4 fill-current" />
-                      <span className="hidden sm:inline">WhatsApp</span>
-                    </button>
                   </div>
                 </div>
               );
