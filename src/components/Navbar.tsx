@@ -78,8 +78,8 @@ export function Navbar() {
                 onError={() => setLogoError(true)}
               />
             </div>
-            <span className="font-semibold text-xs sm:text-sm tracking-wider text-[#3E3A35] truncate max-w-[100px] sm:max-w-none block">
-              {siteSettings?.siteName?.toUpperCase() || 'PERENNIALS'}
+            <span className="font-semibold text-xs sm:text-sm md:text-base tracking-wider text-[#3E3A35] whitespace-nowrap block">
+              {siteSettings?.siteName?.toUpperCase() || 'PERENNIALS VISA'}
             </span>
           </Link>
 
