@@ -138,7 +138,7 @@ export default function ProcessStepsManager() {
                   {step.order}
                 </span>
                 <h3 className="text-xl font-bold text-[#3E3A35]">{step.title}</h3>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-[#E6DFD5] text-[#7A7369] text-sm">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-md border border-[#E6DFD5] text-[#7A7369] text-sm">
                   <Clock className="w-3.5 h-3.5" />
                   {step.time}
                 </div>

@@ -128,7 +128,7 @@ function StatusCard({ title, status, icon }: { title: string, status: string, ic
           {icon}
         </div>
         <span className={cn(
-          "px-3 py-1 rounded-full text-xs font-medium border",
+          "px-2.5 py-0.5 rounded-md text-xs font-medium border",
           status === 'operational' ? "bg-green-500/10 text-green-400 border-green-500/20" :
           status === 'degraded' ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" :
           "bg-red-500/10 text-red-400 border-red-500/20"

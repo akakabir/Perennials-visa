@@ -14,8 +14,8 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
 
           <div className="md:col-span-1 space-y-6">
-            <Link to="/" className="flex items-center gap-2 group relative inline-flex">
-              <div className="relative flex items-center justify-center w-14 h-14 bg-[#0C0C34] rounded-full p-0 shadow-md group-hover:scale-105 transition-transform duration-300 overflow-hidden">
+            <Link to="/" className="flex items-center gap-3 group relative inline-flex">
+              <div className="relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 aspect-square shrink-0 rounded-full bg-[#0C0C34] p-0 shadow-md group-hover:scale-105 transition-transform duration-300 overflow-hidden">
                 <img 
                   src={logoError ? "/logo.png" : (siteSettings?.logoUrl || "/logo.png")} 
                   alt={`${siteSettings?.siteName || 'Perennials Visa'} Logo`} 
@@ -23,7 +23,7 @@ export function Footer() {
                   onError={() => setLogoError(true)}
                 />
               </div>
-              <span className="font-bold text-2xl tracking-wider text-[#3E3A35]">{siteSettings?.siteName?.toUpperCase() || 'PERENNIALS'}</span>
+              <span className="font-bold text-xl sm:text-2xl tracking-wider text-[#3E3A35]">{siteSettings?.siteName?.toUpperCase() || 'PERENNIALS'}</span>
             </Link>
             <p className="text-sm text-[#7A7369]/70 leading-relaxed">
               {siteSettings.aboutBlurb}
@@ -34,17 +34,18 @@ export function Footer() {
             <h4 className="text-[#3E3A35] font-medium mb-6">Quick Links</h4>
             <ul className="space-y-3 text-sm text-[#7A7369]/70">
               <li><a href="/#plans" className="hover:text-[#5C564D] transition-colors">Visa Plans</a></li>
-              <li><a href="/#reviews" className="hover:text-[#5C564D] transition-colors">Client Reviews</a></li>
-              <li><a href="#" className="hover:text-[#5C564D] transition-colors">About Us</a></li>
+              <li><Link to="/about" className="hover:text-[#5C564D] transition-colors">About Us</Link></li>
+              <li><Link to="/faqs" className="hover:text-[#5C564D] transition-colors">FAQs</Link></li>
+              <li><a href="/#contact" className="hover:text-[#5C564D] transition-colors">Contact Form</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-[#3E3A35] font-medium mb-6">Support</h4>
+            <h4 className="text-[#3E3A35] font-medium mb-6">Support & Reviews</h4>
             <ul className="space-y-3 text-sm text-[#7A7369]/70">
-              <li><a href="#" className="hover:text-[#5C564D] transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-[#5C564D] transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-[#5C564D] transition-colors">FAQ</a></li>
+              <li><a href="/#reviews" className="hover:text-[#5C564D] transition-colors">Client Reviews</a></li>
+              <li><Link to="/faqs" className="hover:text-[#5C564D] transition-colors">Help & FAQ</Link></li>
+              <li><a href={`https://wa.me/${siteSettings.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="hover:text-[#5C564D] transition-colors">WhatsApp Support</a></li>
             </ul>
           </div>
 

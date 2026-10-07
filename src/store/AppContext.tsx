@@ -13,6 +13,7 @@ interface AppContextType {
   emailTemplates: EmailTemplate[];
   emailDrafts: EmailDraft[];
   emailHistory: EmailRecord[];
+  isDataLoaded: boolean;
   updateEmailTemplate: (template: EmailTemplate) => Promise<void>;
   addEmailTemplate: (template: EmailTemplate) => Promise<void>;
   deleteEmailTemplate: (id: string) => Promise<void>;
@@ -59,7 +60,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   address: 'Dubai, UAE',
   heroHeadline: 'Your Gateway to Global Horizons',
   heroSubheading: 'Expert visa consultancy for individuals and businesses worldwide.',
-  aboutBlurb: 'We provide seamless visa processing with a high success rate.',
+  aboutBlurb: 'Professional assistance for tourism and short-stay business visa applications worldwide.',
   footerText: '© 2026 Perennials Visa. All rights reserved.',
   admins: [{ name: 'Admin', email: 'admin1', passwordHash: 'Perennial1@', role: 'admin', status: 'active' }],
   forgotPasswordCode: 'didyouknowthatthiswebsitewasmadebyathirteenyearold'
@@ -71,9 +72,10 @@ const DEFAULT_TEMPLATES: EmailTemplate[] = [
 ];
 
 const DEFAULT_STEPS: ProcessStep[] = [
-  { id: '1', title: "Choose Plan", description: "Select your destination and visa type.", time: "1-2 Days", order: 1 },
-  { id: '2', title: "Submit Docs", description: "Upload requirements securely online.", time: "1 Day", order: 2 },
-  { id: '3', title: "We Process", description: "Our experts review and file your case.", time: "3-5 Days", order: 3 }
+  { id: '1', title: "MESSAGE US ON WHATSAPP", description: "Share your intended destination, travel dates, and purpose in a quick message.", time: "Step 1", order: 1 },
+  { id: '2', title: "RECEIVE REQUIREMENTS", description: "We review your profile and instantly reply with the exact documents required for your application.", time: "Step 2", order: 2 },
+  { id: '3', title: "PREPARE YOUR APPLICATION", description: "We assist with organizing, reviewing, and preparing your application forms and supporting documentation.", time: "Step 3", order: 3 },
+  { id: '4', title: "SUBMIT & FOLLOW UP", description: "Your application is submitted through the official process, and we guide you on subsequent steps.", time: "Step 4", order: 4 }
 ];
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
@@ -85,6 +87,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(DEFAULT_TEMPLATES);
   const [emailDrafts, setEmailDrafts] = useState<EmailDraft[]>([]);
   const [emailHistory, setEmailHistory] = useState<EmailRecord[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [adminEmail, setAdminUsernameState] = useState<string | null>(() => sessionStorage.getItem('pv_adminEmail'));
   const [adminLoggedIn, setAdminLoggedInState] = useState<boolean>(() => {
     return sessionStorage.getItem('pv_adminSession') === 'true';
@@ -101,9 +104,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    let resolved = 0;
+    const markResolved = () => {
+      resolved++;
+      if (resolved >= 2) {
+        setIsDataLoaded(true);
+      }
+    };
+    const safetyTimer = setTimeout(() => {
+      setIsDataLoaded(true);
+    }, 1800);
+
     const unsubscribePlans = onSnapshot(
       collection(db, 'visaPlans'),
       (snapshot) => {
+        markResolved();
         if (snapshot.empty) {
           DEFAULT_PLANS.forEach(plan => setDoc(doc(db, 'visaPlans', plan.id), plan).catch(() => {}));
           setVisaPlans(DEFAULT_PLANS);
@@ -112,6 +127,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       },
       (err) => {
+        markResolved();
         console.warn('Firestore visaPlans listener notice:', err.message);
       }
     );
@@ -139,6 +155,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribeSettings = onSnapshot(
       doc(db, 'siteSettings', 'global'),
       (docSnap) => {
+        markResolved();
         if (docSnap.exists()) {
           setSiteSettings({ id: docSnap.id, ...docSnap.data() } as unknown as SiteSettings);
         } else {
@@ -147,6 +164,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       },
       (err) => {
+        markResolved();
         console.warn('Firestore siteSettings listener notice:', err.message);
       }
     );
@@ -206,6 +224,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
 
     return () => {
+      clearTimeout(safetyTimer);
       unsubscribePlans();
       unsubscribeApps();
       unsubscribeReviews();
@@ -275,12 +294,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const contextValue = React.useMemo(() => {
     if (!siteSettings) return undefined;
     return {
-      visaPlans, applications, reviews, siteSettings, processSteps, emailTemplates, emailDrafts, emailHistory, adminLoggedIn, adminEmail, adminUsername: adminEmail, setAdminLoggedIn, setAdminUsername,
+      visaPlans, applications, reviews, siteSettings, processSteps, emailTemplates, emailDrafts, emailHistory, isDataLoaded, adminLoggedIn, adminEmail, adminUsername: adminEmail, setAdminLoggedIn, setAdminUsername,
       updateVisaPlan, addVisaPlan, deleteVisaPlan,
       updateApplication, addApplication, deleteApplication, updateReview, addReview, deleteReview, updateSiteSettings,
       updateProcessStep, addProcessStep, deleteProcessStep, updateEmailTemplate, addEmailTemplate, deleteEmailTemplate, updateEmailDraft, addEmailDraft, deleteEmailDraft, addEmailRecord, deleteEmailRecord
     };
-  }, [visaPlans, applications, reviews, siteSettings, processSteps, adminLoggedIn, emailTemplates, emailDrafts, emailHistory, adminEmail]);
+  }, [visaPlans, applications, reviews, siteSettings, processSteps, adminLoggedIn, emailTemplates, emailDrafts, emailHistory, adminEmail, isDataLoaded]);
 
   if (!siteSettings || !contextValue) {
     return (

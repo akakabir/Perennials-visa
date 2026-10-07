@@ -1,5 +1,6 @@
 import React, { useState, Children, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Button } from './Button';
 import './Stepper.css';
 
 // [UI COMPONENT] Stepper - Renders the Stepper view
@@ -59,7 +60,7 @@ export default function Stepper({
     <div className="outer-container" {...rest}>
       <div
         className={`step-circle-container ${stepCircleContainerClassName}`}
-        style={{ border: '1px solid #E6DFD5', backgroundColor: '#FCFBF8' }}
+        style={{ backgroundColor: '#FCFBF8' }}
       >
         <div className={`step-indicator-row ${stepContainerClassName}`}>
           {stepsArray.map((_, index) => {
@@ -106,17 +107,23 @@ export default function Stepper({
           <div className={`footer-container ${footerClassName}`}>
             <div className={`footer-nav ${currentStep !== 1 ? 'spread' : 'end'}`}>
               {currentStep !== 1 && (
-                <button
+                <Button
+                  size="sm"
                   onClick={handleBack}
-                  className={`back-button ${currentStep === 1 ? 'inactive' : ''}`}
+                  className="px-4 py-1.5"
                   {...backButtonProps}
                 >
                   {backButtonText}
-                </button>
+                </Button>
               )}
-              <button onClick={isLastStep ? handleComplete : handleNext} className="next-button" style={{backgroundColor: '#3E3A35'}} {...nextButtonProps}>
+              <Button
+                size="sm"
+                onClick={isLastStep ? handleComplete : handleNext}
+                className="px-5 py-1.5"
+                {...nextButtonProps}
+              >
                 {isLastStep ? 'Complete' : nextButtonText}
-              </button>
+              </Button>
             </div>
           </div>
         )}

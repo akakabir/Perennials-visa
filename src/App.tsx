@@ -1,12 +1,13 @@
 import { checkAndUpdateTemplates } from "./updateTemplates";
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useAppContext } from './store/AppContext';
 import { Cursor } from './components/Cursor';
 import { Chatbot } from './components/Chatbot';
 import { FloatingContact } from './components/FloatingContact';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
+import { LoadingSequence } from './components/LoadingSequence';
 
 // [SEO & METADATA] Synchronizes React router state/settings with document metadata
 // [UI COMPONENT] AppSEOUpdater - Renders the AppSEOUpdater view
@@ -30,7 +31,19 @@ function AppSEOUpdater() {
   return null;
 }
 
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  React.useEffect(() => {
+    if (!hash) {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname, hash]);
+  return null;
+}
+
 const Home = lazy(() => import('./pages/Home'));
+const About = lazy(() => import('./pages/About'));
+const FAQs = lazy(() => import('./pages/FAQs'));
 const Status = lazy(() => import('./pages/Status'));
 const Payment = lazy(() => import('./pages/Payment'));
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
@@ -52,8 +65,10 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 export default function App() {
   return (
     <AppProvider>
+      <LoadingSequence />
       <AppSEOUpdater />
       <BrowserRouter>
+        <ScrollToTop />
         <Cursor />
         <Chatbot />
         <FloatingContact />
@@ -61,6 +76,9 @@ export default function App() {
           <Routes>
 
             <Route path="/" element={<><Navbar /><main className="min-h-screen pt-24"><Home /></main><Footer /></>} />
+            <Route path="/about" element={<><Navbar /><main className="min-h-screen pt-28"><About /></main><Footer /></>} />
+            <Route path="/faqs" element={<><Navbar /><main className="min-h-screen pt-28"><FAQs /></main><Footer /></>} />
+            <Route path="/faq" element={<Navigate to="/faqs" replace />} />
             <Route path="/status" element={<Status />} />
             <Route path="/pay" element={<Payment />} />
 

@@ -25,7 +25,7 @@ export default function AdminLayout() {
     { name: 'Pricing', path: '/admin/pricing', icon: DollarSign },
     { name: 'Applications', path: '/admin/applications', icon: Users },
     { name: 'Application History', path: '/admin/application-history', icon: Archive, badge: archivedCount },
-    { name: 'Email Center', path: '/admin/emails', icon: Mail },
+    { name: 'Email Drafts', path: '/admin/emails', icon: Mail },
     { name: 'Reviews', path: '/admin/reviews', icon: MessageSquare },
     { name: 'Process Steps', path: '/admin/process-steps', icon: Settings },
     { name: 'Site Settings', path: '/admin/settings', icon: Settings },
@@ -62,7 +62,7 @@ export default function AdminLayout() {
                 <item.icon className="w-5 h-5" />
                 <span className="flex-1">{item.name}</span>
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="px-2 py-0.5 text-[11px] font-semibold bg-[#E2B87C]/20 text-[#3E3A35] rounded-full">
+                  <span className="px-2 py-0.5 text-[11px] font-semibold bg-[#E2B87C]/20 text-[#3E3A35] rounded-md">
                     {item.badge}
                   </span>
                 )}

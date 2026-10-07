@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Globe2, ShieldCheck, Clock, CreditCard, ChevronRight, Star, FileText, CheckCircle, ArrowRight, Plane, MessageCircle, Copy, Check, ExternalLink, Send, Sparkles } from 'lucide-react';
+import { Globe2, ShieldCheck, Clock, CreditCard, ChevronRight, Star, FileText, CheckCircle, ArrowRight, Plane, MessageCircle, Copy, Check, ExternalLink, Send, Sparkles, Compass, Users } from 'lucide-react';
 import { Button } from '../components/Button';
 import TiltCard from '../components/TiltCard';
 import Stepper, { Step } from '../components/Stepper';
@@ -40,6 +40,8 @@ export default function Home() {
   const [reviewRating, setReviewRating] = useState(5);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [assessmentSubmitted, setAssessmentSubmitted] = useState(false);
+  const [isSubmittingAssessment, setIsSubmittingAssessment] = useState(false);
 
   // Helper: Generates a comprehensive pre-written WhatsApp message containing all plan details
   const buildWhatsAppMessage = (
@@ -399,15 +401,16 @@ Please let me know the document checklist and how we can proceed with this appli
                       </div>
 
                       {/* Primary WhatsApp Action Button */}
-                      <button
+                      <Button
                         type="button"
+                        size="lg"
                         disabled={isSubmittingApp}
                         onClick={() => handleSendWhatsApp(checkoutPlan)}
-                        className="w-full h-12 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg disabled:opacity-60"
+                        className="w-full flex items-center justify-center gap-2.5"
                       >
-                        <MessageCircle className="w-5 h-5 fill-current" />
+                        <MessageCircle className="w-5 h-5" />
                         <span>Send Details & Plan on WhatsApp</span>
-                      </button>
+                      </Button>
 
                       <div className="text-center">
                         <button
@@ -495,8 +498,64 @@ Please let me know the document checklist and how we can proceed with this appli
               }}>
                 Explore Visa Plans
               </Button>
+              <Button
+                size="lg"
+                onClick={() => {
+                  const rawPhone = siteSettings?.whatsapp || '971501234567';
+                  const cleanPhone = rawPhone.replace(/\D/g, '');
+                  window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent('Hello Perennials Visa team, I would like to inquire about visa plans.')}`, '_blank', 'noopener,noreferrer');
+                }}
+                className="flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>Inquire on WhatsApp</span>
+              </Button>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* [SECTION] Travel Plans Made Simpler (Harmonized with website luxury palette) */}
+      <section className="py-24 bg-[#FAF8F4] relative z-10 border-b border-[#E6DFD5]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
+          <div className="text-xs font-bold tracking-[0.25em] text-[#E2B87C] uppercase mb-3">
+            YOUR JOURNEY STARTS HERE
+          </div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif italic font-normal text-[#3E3A35] mb-5">
+            Travel Plans Made Simpler.
+          </h2>
+          <p className="text-[#7A7369] max-w-3xl mx-auto text-sm sm:text-base leading-relaxed mb-16 font-light">
+            Planning an international trip should be exciting, not overwhelming. We help you understand the visa requirements, organize your documents, and prepare your application so you can focus on what really matters — looking forward to your journey.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="bg-[#FCFBF8] border border-[#E6DFD5] rounded-2xl p-8 sm:p-10 flex flex-col items-center justify-center text-center hover:border-[#E2B87C]/50 hover:shadow-lg transition-all duration-300 group">
+              <div className="w-14 h-14 rounded-full bg-[#FAF8F4] border border-[#E6DFD5] flex items-center justify-center mb-6 text-[#E2B87C] group-hover:border-[#E2B87C]/50 group-hover:scale-105 transition-all">
+                <FileText className="w-7 h-7 stroke-[1.75]" />
+              </div>
+              <h3 className="text-[#3E3A35] text-xs sm:text-sm font-semibold tracking-widest uppercase">
+                PROFESSIONAL DOCUMENTATION SUPPORT
+              </h3>
+            </div>
+
+            <div className="bg-[#FCFBF8] border border-[#E6DFD5] rounded-2xl p-8 sm:p-10 flex flex-col items-center justify-center text-center hover:border-[#E2B87C]/50 hover:shadow-lg transition-all duration-300 group">
+              <div className="w-14 h-14 rounded-full bg-[#FAF8F4] border border-[#E6DFD5] flex items-center justify-center mb-6 text-[#E2B87C] group-hover:border-[#E2B87C]/50 group-hover:scale-105 transition-all">
+                <Compass className="w-7 h-7 stroke-[1.75]" />
+              </div>
+              <h3 className="text-[#3E3A35] text-xs sm:text-sm font-semibold tracking-widest uppercase">
+                APPLICATION GUIDANCE
+              </h3>
+            </div>
+
+            <div className="bg-[#FCFBF8] border border-[#E6DFD5] rounded-2xl p-8 sm:p-10 flex flex-col items-center justify-center text-center hover:border-[#E2B87C]/50 hover:shadow-lg transition-all duration-300 group">
+              <div className="w-14 h-14 rounded-full bg-[#FAF8F4] border border-[#E6DFD5] flex items-center justify-center mb-6 text-[#E2B87C] group-hover:border-[#E2B87C]/50 group-hover:scale-105 transition-all">
+                <Users className="w-7 h-7 stroke-[1.75]" />
+              </div>
+              <h3 className="text-[#3E3A35] text-xs sm:text-sm font-semibold tracking-widest uppercase">
+                PERSONALIZED ASSISTANCE
+              </h3>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -547,7 +606,7 @@ Please let me know the document checklist and how we can proceed with this appli
                   <select
                     value={selectedCurrency}
                     onChange={(e) => setSelectedCurrency(e.target.value)}
-                    className="appearance-none bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-full pl-4 pr-10 py-2 text-sm outline-none focus:border-[#E2B87C]"
+                    className="appearance-none bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl pl-4 pr-10 py-2 text-sm outline-none focus:border-[#E2B87C]"
                   >
                     {allCurrencies.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -566,7 +625,7 @@ Please let me know the document checklist and how we can proceed with this appli
                   <div className="p-8 flex-1 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-3xl">{plan.flag}</span>
-                      <span className="text-xs font-medium px-3 py-1 bg-[#FCFBF8] text-[#7A7369] rounded-full border border-[#E6DFD5]">
+                      <span className="text-xs font-medium px-2.5 py-1 bg-[#FAF8F4] text-[#7A7369] rounded-md border border-[#E6DFD5]">
                         {plan.processingTime}
                       </span>
                     </div>
@@ -622,15 +681,15 @@ Please let me know the document checklist and how we can proceed with this appli
               onFinalStepCompleted={() => {}}
               backButtonText="Previous"
               nextButtonText="Next"
-              contentClassName="bg-transparent mt-6"
+              contentClassName="bg-transparent mt-2"
             >
               {processSteps.map((step) => (
                 <Step key={step.id}>
-                  <div className="text-center px-4 py-8">
-                    <h3 className="text-2xl font-semibold text-[#3E3A35] mb-4">{step.title}</h3>
-                    <p className="text-[#7A7369] max-w-lg mx-auto mb-6 text-lg">{step.description}</p>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FCFBF8] border border-[#E2B87C]/30 rounded-full text-[#E2B87C] font-medium text-sm">
-                      <Clock className="w-4 h-4" />
+                  <div className="text-center px-4 py-3 sm:py-4">
+                    <h3 className="text-xl sm:text-2xl font-semibold text-[#3E3A35] mb-3">{step.title}</h3>
+                    <p className="text-[#7A7369] max-w-lg mx-auto mb-4 text-base sm:text-lg">{step.description}</p>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FAF8F4] border border-[#E2B87C]/30 rounded-md text-[#E2B87C] font-medium text-xs sm:text-sm">
+                      <Clock className="w-3.5 h-3.5" />
                       <span>{step.time}</span>
                     </div>
                   </div>
@@ -677,7 +736,7 @@ Please let me know the document checklist and how we can proceed with this appli
                             ))}
                           </div>
                           {review.status === 'approved' && (
-                            <div className="flex items-center gap-1 bg-[#D3E4CD] text-[#4A7C59] px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                            <div className="flex items-center gap-1 bg-[#D3E4CD] text-[#4A7C59] px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">
                               <CheckCircle className="w-3 h-3" />
                               Verified
                             </div>
@@ -718,7 +777,7 @@ Please let me know the document checklist and how we can proceed with this appli
         </div>
       </section>
 
-      <section className="py-24 relative z-10 mx-4 md:mx-auto max-w-6xl mb-24 rounded-3xl overflow-hidden border border-[#E6DFD5]">
+      <section id="contact" className="py-24 relative z-10 mx-4 md:mx-auto max-w-6xl mb-24 rounded-3xl overflow-hidden border border-[#E6DFD5]">
         <div className="absolute inset-0 bg-gradient-to-br from-[#F8F9FA] to-[#E9EDF5] z-0" />
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 z-0" />
 
@@ -739,71 +798,94 @@ Please let me know the document checklist and how we can proceed with this appli
           </div>
           
           <div className="bg-[#FCFBF8] p-6 sm:p-8 rounded-2xl border border-[#D9CFBE] shadow-xl">
-            <form className="space-y-4" onSubmit={async (e) => {
-              e.preventDefault();
-              const form = e.target as HTMLFormElement;
-              const formData = new FormData(form);
-              const data = Object.fromEntries(formData);
-              // Save to applications as a lead
-              
-              const id = Date.now().toString();
-              await addApplication({
-                id,
-                referenceId: `LEAD-${id.slice(-6)}`,
-                name: data.name as string,
-                email: data.email as string,
-                phone: data.phone as string,
-                planId: 'General Inquiry',
-                submittedDate: new Date().toISOString(),
-                status: 'Submitted',
-                adminNote: `Lead Assessment\nDestination: ${data.destination}\nTravel Date: ${data.travelDate}\nPurpose: ${data.purpose}`
-              });
-              alert('Thank you! Your assessment request has been submitted.');
-              form.reset();
-            }}>
-              <div>
-                <label className="block text-xs font-medium text-[#7A7369] mb-1">Full Name</label>
-                <input required name="name" type="text" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]" placeholder="John Doe" />
+            {assessmentSubmitted ? (
+              <div className="text-center py-10 space-y-4">
+                <div className="w-16 h-16 bg-[#D3E4CD] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#4A7C59]/30">
+                  <CheckCircle className="w-8 h-8 text-[#4A7C59]" />
+                </div>
+                <h3 className="text-2xl font-bold text-[#3E3A35]">Thank You!</h3>
+                <p className="text-[#7A7369] text-sm max-w-sm mx-auto">
+                  Your assessment request has been submitted. Our visa specialists will review your details and contact you promptly.
+                </p>
+                <Button onClick={() => setAssessmentSubmitted(false)} variant="outline" size="sm" className="mt-4">
+                  Submit Another Inquiry
+                </Button>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-[#7A7369] mb-1">Email Address</label>
-                <input required name="email" type="email" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]" placeholder="john@example.com" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-[#7A7369] mb-1">Phone Number</label>
-                <input required name="phone" type="tel" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]" placeholder="+1 234 567 890" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-[#7A7369] mb-1">Intended Destination</label>
-                <select required name="destination" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]">
-                  <option value="">Select Destination</option>
-                  <option value="Schengen">Schengen Area (Europe)</option>
-                  <option value="Japan">Japan</option>
-                  <option value="UK">United Kingdom</option>
-                  <option value="US">United States</option>
-                  <option value="Canada">Canada</option>
-                  <option value="Australia">Australia</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            ) : (
+              <form className="space-y-4" onSubmit={async (e) => {
+                e.preventDefault();
+                setIsSubmittingAssessment(true);
+                const form = e.target as HTMLFormElement;
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
+                
+                const id = Date.now().toString();
+                try {
+                  await addApplication({
+                    id,
+                    referenceId: `LEAD-${id.slice(-6)}`,
+                    name: data.name as string,
+                    email: data.email as string,
+                    phone: data.phone as string,
+                    planId: 'General Inquiry',
+                    submittedDate: new Date().toISOString(),
+                    status: 'Submitted',
+                    adminNote: `Lead Assessment\nDestination: ${data.destination}\nTravel Date: ${data.travelDate}\nPurpose: ${data.purpose}`
+                  });
+                  setAssessmentSubmitted(true);
+                  form.reset();
+                } catch (err) {
+                  console.error('Failed to submit assessment:', err);
+                } finally {
+                  setIsSubmittingAssessment(false);
+                }
+              }}>
                 <div>
-                  <label className="block text-xs font-medium text-[#7A7369] mb-1">Travel Date</label>
-                  <input required name="travelDate" type="date" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]" />
+                  <label className="block text-xs font-medium text-[#7A7369] mb-1">Full Name</label>
+                  <input required name="name" type="text" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]" placeholder="John Doe" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#7A7369] mb-1">Purpose</label>
-                  <select required name="purpose" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]">
-                    <option value="">Select Purpose</option>
-                    <option value="Tourism">Tourism</option>
-                    <option value="Business">Business</option>
-                    <option value="Family">Family/Friends</option>
+                  <label className="block text-xs font-medium text-[#7A7369] mb-1">Email Address</label>
+                  <input required name="email" type="email" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]" placeholder="john@example.com" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#7A7369] mb-1">Phone Number</label>
+                  <input required name="phone" type="tel" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]" placeholder="+1 234 567 890" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#7A7369] mb-1">Intended Destination</label>
+                  <select required name="destination" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]">
+                    <option value="">Select Destination</option>
+                    <option value="Schengen">Schengen Area (Europe)</option>
+                    <option value="Japan">Japan</option>
+                    <option value="UK">United Kingdom</option>
+                    <option value="US">United States</option>
+                    <option value="Canada">Canada</option>
+                    <option value="Australia">Australia</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
-              </div>
-              <Button type="submit" className="w-full mt-4">Submit Request</Button>
-            </form>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-[#7A7369] mb-1">Travel Date</label>
+                    <input required name="travelDate" type="date" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#7A7369] mb-1">Purpose</label>
+                    <select required name="purpose" className="w-full bg-white border border-[#D9CFBE] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#E2B87C]">
+                      <option value="">Select Purpose</option>
+                      <option value="Tourism">Tourism</option>
+                      <option value="Business">Business</option>
+                      <option value="Family">Family/Friends</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+                <Button type="submit" disabled={isSubmittingAssessment} className="w-full mt-4">
+                  {isSubmittingAssessment ? 'Submitting Request...' : 'Submit Request'}
+                </Button>
+              </form>
+            )}
           </div>
         </div>
       </section>

@@ -153,8 +153,8 @@ export default function PlansManager() {
             <h3 className="text-lg font-semibold text-[#3E3A35] mb-1">{plan.name}</h3>
             <p className="text-xs text-[#7A7369]/50 mb-3">{plan.destinationCountry}</p>
             <div className="flex gap-2 mt-auto pt-4 border-t border-[#E6DFD5]">
-              {plan.featured && <span className="text-[10px] px-2 py-0.5 bg-[#E2B87C]/10 text-[#E2B87C] rounded-full border border-[#E2B87C]/20">Featured</span>}
-              <span className="text-[10px] px-2 py-0.5 bg-[#CACACB]/10 text-[#7A7369] rounded-full border border-[#D9CFBE]">{plan.status}</span>
+              {plan.featured && <span className="text-[10px] px-2 py-0.5 bg-[#E2B87C]/10 text-[#E2B87C] rounded-md border border-[#E2B87C]/20">Featured</span>}
+              <span className="text-[10px] px-2 py-0.5 bg-[#CACACB]/10 text-[#7A7369] rounded-md border border-[#D9CFBE]">{plan.status}</span>
             </div>
           </div>
         ))}

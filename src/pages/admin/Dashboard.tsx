@@ -48,7 +48,7 @@ export default function Dashboard() {
                   <p className="text-[#3E3A35] text-sm font-medium">{app.name}</p>
                   <p className="text-xs text-[#7A7369]/50">{app.referenceId}</p>
                 </div>
-                <span className="text-xs font-medium px-2 py-1 bg-[#E2B87C]/10 text-[#E2B87C] rounded-full border border-[#E2B87C]/20">
+                <span className="text-xs font-medium px-2 py-0.5 bg-[#E2B87C]/10 text-[#E2B87C] rounded-md border border-[#E2B87C]/20">
                   {app.status}
                 </span>
               </div>

@@ -78,7 +78,7 @@ export default function ApplicationsManager() {
             <Archive className="w-4 h-4 text-[#E2B87C]" />
             <span>Application History</span>
             {archivedCount > 0 && (
-              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#E2B87C]/20 text-[#3E3A35] rounded-full">
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#E2B87C]/20 text-[#3E3A35] rounded-md">
                 {archivedCount}
               </span>
             )}
