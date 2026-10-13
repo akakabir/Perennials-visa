@@ -13,9 +13,8 @@ function matchesGoldOrShade(rgbStr: string): boolean {
   const rgb = parseRgb(rgbStr);
   if (!rgb) return false;
   const [r, g, b] = rgb;
-  // Gold/amber range check: warm golden tones (e.g. #E2B87C, #E8C58C, #DEB57B)
-  // Has warmth: r > g and g > b, strong red-blue delta (r - b >= 35), brightness >= 150
-  return r >= 165 && g >= 130 && b >= 80 && r > g && g > b && (r - b) >= 35 && (r - g) <= 65;
+  // Gold/amber range check: warm golden tones (e.g. #E2B87C, #E8C58C, #DEB57B, #966F2D, #8E6527)
+  return r >= 135 && g >= 95 && b >= 35 && r > g && g > b && (r - b) >= 25;
 }
 
 function isSameColorOrShade(el: Element | null): boolean {
@@ -25,8 +24,11 @@ function isSameColorOrShade(el: Element | null): boolean {
     const cls = (typeof curr.className === 'string' ? curr.className : '').toLowerCase();
     
     // Explicit class & attribute indicators for gold elements
+    const variant = curr.getAttribute('data-variant');
+    const isNonGold = variant === 'secondary' || variant === 'outline' || variant === 'ghost' || cls.includes('outline') || cls.includes('ghost') || cls.includes('bg-transparent');
+
     if (
-      cls.includes('specular-button') ||
+      (cls.includes('specular-button') && !isNonGold) ||
       cls.includes('bg-[#e2b87c]') ||
       cls.includes('from-[#e2b87c]') ||
       cls.includes('to-[#e2b87c]') ||
@@ -38,8 +40,8 @@ function isSameColorOrShade(el: Element | null): boolean {
       cls.includes('bg-[#d4c3a3]') ||
       cls.includes('bg-[#deb57b]') ||
       cls.includes('bg-[#c9a26b]') ||
-      curr.getAttribute('data-variant') === 'primary' ||
-      (curr.tagName === 'BUTTON' && !cls.includes('outline') && !cls.includes('ghost') && !cls.includes('bg-transparent'))
+      variant === 'primary' ||
+      (curr.tagName === 'BUTTON' && !isNonGold)
     ) {
       return true;
     }

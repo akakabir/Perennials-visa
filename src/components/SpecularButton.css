@@ -1,98 +1,93 @@
 .specular-button {
-  --sb-radius: 18px;
-  --sb-tint: #ffffff;
-  --sb-tint-opacity: 0;
-  --sb-blur: 0px;
-  --sb-text-color: #f5f5f5;
-  --sb-base-color: #E2B87C;
-
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(226, 184, 124, 0.35);
+  box-sizing: border-box;
   margin: 0;
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  text-decoration: none;
+  vertical-align: middle;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, filter 0.2s ease;
+  overflow: hidden;
   font-family: inherit;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
-  color: var(--sb-text-color);
-  background: color-mix(in srgb, var(--sb-tint) calc(var(--sb-tint-opacity) * 100%), transparent);
-  border-radius: var(--sb-radius);
-  backdrop-filter: blur(var(--sb-blur));
-  -webkit-backdrop-filter: blur(var(--sb-blur));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 4px 16px rgba(0, 0, 0, 0.12);
-  cursor: pointer;
-  outline: none;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-  overflow: hidden;
-  text-decoration: none;
-  box-sizing: border-box;
+  line-height: 1.25;
+  border: none;
+  box-shadow: inset 0 0 0 1px rgba(226, 184, 124, 0.3), 0 2px 8px -2px rgba(10, 10, 49, 0.08);
+}
+
+.specular-button:hover,
+.specular-button--hovered {
+  filter: brightness(1.04);
+  box-shadow: inset 0 0 0 1px rgba(226, 184, 124, 0.7), 0 6px 20px -3px rgba(150, 111, 45, 0.28), 0 0 12px rgba(226, 184, 124, 0.2);
 }
 
 .specular-button:active {
-  transform: scale(0.97);
+  transform: scale(0.985);
 }
 
 .specular-button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--sb-text-color) 60%, transparent);
-  outline-offset: 3px;
+  outline: 2px solid #E2B87C;
+  outline-offset: 2px;
 }
 
 .specular-button:disabled {
   opacity: 0.55;
-  cursor: default;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
 }
 
-.specular-button:disabled:active {
-  transform: none;
-}
-
+/* Sizing options - increased sizes for better presence and touch targets */
 .specular-button--sm {
-  font-size: 0.85rem;
-  padding: 8px 20px;
+  font-size: 0.875rem;
+  padding: 9px 20px;
+  min-height: 38px;
 }
 
 .specular-button--md {
-  font-size: 0.95rem;
+  font-size: 0.975rem;
   padding: 12px 28px;
+  min-height: 48px;
 }
 
 .specular-button--lg {
-  font-size: 1.05rem;
-  padding: 14px 34px;
+  font-size: 1.075rem;
+  padding: 15px 34px;
+  min-height: 54px;
 }
 
-/* Canvas extends past the button so the rim glow can bleed outside the edge on desktop */
-.specular-button__fx {
+/* WebGL canvas layer sits behind the button content, flush with button edges */
+.specular-button__canvas {
   position: absolute;
-  inset: -10px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
   pointer-events: none;
   z-index: 1;
 }
 
-.specular-button__fx canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.specular-button__label {
+/* Content wrapper keeps labels and icons centered with seamless gap */
+.specular-button__content {
   position: relative;
   z-index: 2;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  text-align: center;
+  box-sizing: border-box;
+  pointer-events: none;
 }
 
-/* On mobile/touch devices, disable WebGL canvas completely to prevent context lost bugs */
-@media (max-width: 767px), (pointer: coarse) {
-  .specular-button__fx {
-    display: none !important;
-  }
+/* Full width buttons */
+.specular-button.w-full {
+  width: 100%;
+  display: flex;
 }
