@@ -4,6 +4,9 @@ import { Globe2, Plane, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { useAppContext } from '../../store/AppContext';
 
+import { db } from '../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
 // [UI COMPONENT] Login - Renders the Login view
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -26,15 +29,31 @@ export default function Login() {
     setLoading(true);
     setError('');
 
-    const validAdmin = siteSettings?.admins?.find(
-      (admin) => admin.email.toLowerCase() === email.toLowerCase() && admin.passwordHash === password
+    const trimmedEmail = email.toLowerCase().trim();
+    let validAdmin = siteSettings?.admins?.find(
+      (admin) => admin.email.toLowerCase().trim() === trimmedEmail && admin.passwordHash === password
     );
+
+    // Fallback directly to Firestore in case page was freshly reloaded and real-time state is still syncing
+    if (!validAdmin) {
+      try {
+        const adminDoc = await getDoc(doc(db, 'admins', trimmedEmail));
+        if (adminDoc.exists()) {
+          const data = adminDoc.data() as any;
+          if (data.passwordHash === password && data.status !== 'inactive') {
+            validAdmin = data;
+          }
+        }
+      } catch (err) {
+        console.warn('Direct admin check notice:', err);
+      }
+    }
 
     const actualAdmin1Password = siteSettings?.admin1Password || 'Perennial1@';
 
-    if (validAdmin || (email.toLowerCase() === 'admin1' && password === actualAdmin1Password)) {
+    if (validAdmin || (trimmedEmail === 'admin1' && password === actualAdmin1Password)) {
       setAdminLoggedIn(true);
-      setAdminUsername(email.toLowerCase());
+      setAdminUsername(trimmedEmail);
       navigate('/admin');
     } else {
       setError('Invalid credentials');

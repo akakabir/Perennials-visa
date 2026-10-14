@@ -72,6 +72,18 @@
         "companyName": "string",
         "logoUrl": "string"
       }
+    },
+    "admins": {
+      "type": "collection",
+      "description": "Administrator accounts and credentials",
+      "schema": {
+        "id": "string",
+        "name": "string",
+        "email": "string",
+        "passwordHash": "string",
+        "role": "string",
+        "status": "string"
+      }
     }
   },
   "securityRules": {
@@ -96,6 +108,10 @@
         "write": "isAdmin()"
       },
       "siteSettings": {
+        "read": "true",
+        "write": "isAdmin()"
+      },
+      "admins": {
         "read": "true",
         "write": "isAdmin()"
       }

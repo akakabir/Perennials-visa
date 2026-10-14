@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { VisaPlan, Application, Review, SiteSettings, ProcessStep, EmailTemplate, EmailDraft, EmailRecord } from '../types';
 import { db, auth } from '../lib/firebase';
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 interface AppContextType {
@@ -157,7 +157,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       (docSnap) => {
         markResolved();
         if (docSnap.exists()) {
-          setSiteSettings({ id: docSnap.id, ...docSnap.data() } as unknown as SiteSettings);
+          const data = docSnap.data() as unknown as SiteSettings;
+          setSiteSettings(prev => ({
+            ...prev,
+            ...data,
+            admins: (data.admins && data.admins.length > 0) ? data.admins : (prev.admins || DEFAULT_SETTINGS.admins)
+          }));
         } else {
           setDoc(doc(db, 'siteSettings', 'global'), DEFAULT_SETTINGS).catch(() => {});
           setSiteSettings(DEFAULT_SETTINGS);
@@ -166,6 +171,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       (err) => {
         markResolved();
         console.warn('Firestore siteSettings listener notice:', err.message);
+      }
+    );
+
+    const unsubscribeAdmins = onSnapshot(
+      collection(db, 'admins'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map(d => ({ ...d.data() } as any));
+          setSiteSettings(prev => ({
+            ...prev,
+            admins: list
+          }));
+        } else {
+          DEFAULT_SETTINGS.admins.forEach(admin => {
+            setDoc(doc(db, 'admins', admin.email.toLowerCase()), admin).catch(() => {});
+          });
+        }
+      },
+      (err) => {
+        console.warn('Firestore admins listener notice:', err.message);
       }
     );
 
@@ -229,6 +254,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       unsubscribeApps();
       unsubscribeReviews();
       unsubscribeSettings();
+      unsubscribeAdmins();
       unsubscribeSteps();
       unsubscribeEmailTemplates();
       unsubscribeEmailDrafts();
@@ -270,6 +296,40 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // [DB ACTION] Update global website settings
   const updateSiteSettings = async (settings: SiteSettings) => {
     await setDoc(doc(db, 'siteSettings', 'global'), { ...settings });
+
+    // Ensure all admin accounts and credentials are saved to the dedicated 'admins' collection in Firestore
+    if (settings.admins && Array.isArray(settings.admins)) {
+      const currentEmails = new Set(
+        settings.admins.map(a => (a.email || '').toLowerCase().trim()).filter(Boolean)
+      );
+
+      for (const admin of settings.admins) {
+        const emailKey = (admin.email || '').toLowerCase().trim();
+        if (emailKey) {
+          await setDoc(doc(db, 'admins', emailKey), {
+            name: admin.name || '',
+            email: emailKey,
+            passwordHash: admin.passwordHash || '',
+            role: admin.role || 'admin',
+            status: admin.status || 'active'
+          });
+        }
+      }
+
+      // Clean up any removed admin accounts from the collection (except never delete if empty safety)
+      if (currentEmails.size > 0) {
+        try {
+          const snap = await getDocs(collection(db, 'admins'));
+          for (const d of snap.docs) {
+            if (!currentEmails.has(d.id.toLowerCase())) {
+              await deleteDoc(doc(db, 'admins', d.id));
+            }
+          }
+        } catch (err) {
+          console.warn('Admins collection prune notice:', err);
+        }
+      }
+    }
   };
 
   const updateProcessStep = async (step: ProcessStep) => {

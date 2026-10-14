@@ -1,18 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../store/AppContext';
 import { Button } from '../../components/Button';
-import { Save, Check, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Save, Check, Plus, Trash2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { AdminAccount } from '../../types';
 
 // [UI COMPONENT] SettingsManager - Renders the SettingsManager view
 export default function SettingsManager() {
   const { siteSettings, updateSiteSettings, adminEmail } = useAppContext();
   const [formData, setFormData] = useState(siteSettings);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>({});
 
+  // Sync formData whenever siteSettings loads or updates from Firestore,
+  // unless the user has actively typed unsaved edits.
+  useEffect(() => {
+    if (!isDirty && siteSettings) {
+      setFormData(siteSettings);
+    }
+  }, [siteSettings, isDirty]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setIsDirty(true);
     setSaved(false);
   };
 
@@ -20,12 +31,14 @@ export default function SettingsManager() {
     const newAdmins = [...(formData.admins || [])];
     newAdmins[index] = { ...newAdmins[index], [field]: value };
     setFormData({ ...formData, admins: newAdmins });
+    setIsDirty(true);
     setSaved(false);
   };
 
   const addAdmin = () => {
     const newAdmins: AdminAccount[] = [...(formData.admins || []), { name: '', email: '', passwordHash: '', role: 'admin', status: 'active' }];
     setFormData({ ...formData, admins: newAdmins });
+    setIsDirty(true);
     setSaved(false);
   };
 
@@ -34,30 +47,40 @@ export default function SettingsManager() {
       alert("Cannot delete the last remaining admin account.");
       return;
     }
-    if (!window.confirm("Are you sure you want to delete this admin account?")) return;
+    const adminToDelete = formData.admins?.[index];
+    if (!window.confirm(`Are you sure you want to delete admin "${adminToDelete?.name || adminToDelete?.email || 'this admin'}"?`)) return;
     const newAdmins = (formData.admins || []).filter((_, i) => i !== index);
     setFormData({ ...formData, admins: newAdmins });
+    setIsDirty(true);
     setSaved(false);
   };
-
 
   const togglePassword = (index: number) => {
     setShowPasswords(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
-  const handleSave = () => {
-    updateSiteSettings(formData);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateSiteSettings(formData);
+      setIsDirty(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      alert('Failed to save settings. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-[#3E3A35]">Site Settings & Content</h1>
-        <Button onClick={handleSave} className="flex items-center gap-2">
-          {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {saved ? 'Saved' : 'Save Changes'}
+        <Button onClick={handleSave} disabled={saving} className="flex items-center gap-2">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+          {saving ? 'Saving...' : saved ? 'Saved' : 'Save Changes'}
         </Button>
       </div>
 
