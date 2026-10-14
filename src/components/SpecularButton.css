@@ -17,13 +17,13 @@
   font-weight: 600;
   line-height: 1.25;
   border: none;
-  box-shadow: inset 0 0 0 1px rgba(226, 184, 124, 0.3), 0 2px 8px -2px rgba(10, 10, 49, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(226, 184, 124, 0.35), 0 2px 8px -2px rgba(10, 10, 49, 0.08);
 }
 
 .specular-button:hover,
 .specular-button--hovered {
   filter: brightness(1.04);
-  box-shadow: inset 0 0 0 1px rgba(226, 184, 124, 0.7), 0 6px 20px -3px rgba(150, 111, 45, 0.28), 0 0 12px rgba(226, 184, 124, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(226, 184, 124, 0.75), 0 6px 20px -3px rgba(226, 184, 124, 0.35), 0 0 12px rgba(210, 210, 210, 0.25);
 }
 
 .specular-button:active {

@@ -167,6 +167,7 @@ const link = (gl: WebGL2RenderingContext) => {
 
 const parseColor = (color: string): [number, number, number] => {
   if (!color || color === 'transparent') return [1, 1, 1];
+  if (color.toLowerCase() === 'silver') return [210 / 255, 210 / 255, 210 / 255];
   if (color.startsWith('#')) {
     let c = color.slice(1);
     if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
@@ -215,8 +216,8 @@ export const SpecularButton = ({
   tintOpacity = 1,
   blur = 0,
   textColor = '#0A0A31',
-  lineColor = '#ffffff',
-  baseColor = '#C89B55',
+  lineColor = '#D2D2D2',
+  baseColor = '#E2B87C',
   intensity = 1.2,
   idleIntensity = 0.35,
   shineSize = 12,

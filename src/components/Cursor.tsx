@@ -29,6 +29,9 @@ function isSameColorOrShade(el: Element | null): boolean {
 
     if (
       (cls.includes('specular-button') && !isNonGold) ||
+      cls.includes('bg-[#c59e65]') ||
+      cls.includes('text-[#c59e65]') ||
+      cls.includes('border-[#c59e65]') ||
       cls.includes('bg-[#e2b87c]') ||
       cls.includes('from-[#e2b87c]') ||
       cls.includes('to-[#e2b87c]') ||
@@ -158,7 +161,7 @@ export function Cursor() {
         strokeWidth={isDark ? 2.2 : 1.5} 
         className={
           isDark 
-            ? "text-[#704712] fill-[#704712]/35 drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition-colors duration-150" 
+            ? "text-[#704712] fill-transparent drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition-colors duration-150" 
             : "text-[#E2B87C] fill-transparent drop-shadow-md transition-colors duration-150"
         } 
       />

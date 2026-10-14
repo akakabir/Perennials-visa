@@ -26,12 +26,12 @@ export function Button({ variant = 'primary', size = 'md', className, children, 
     );
   }
 
-  // Original Perennial Visa brand colors:
-  // Primary: signature warm gold #E2B87C with luxury dark contrast text #0A0A31
+  // Perennial Visa colors derived directly from call button:
+  // Primary: call button gold #E2B87C with deep contrast text #0A0A31
   // Secondary: soft warm background #F0EEE9 with dark text #3E3A35
-  // Outline: transparent background with gold rim #E2B87C and gold/dark text
+  // Outline: transparent background with call button gold rim #E2B87C and gold text
   const getTint = () => {
-    if (isPrimary) return '#E2B87C';
+    if (isPrimary) return '#E2B87C'; // Gold from call button
     if (isSecondary) return '#F0EEE9';
     return 'transparent'; // outline
   };
@@ -39,19 +39,17 @@ export function Button({ variant = 'primary', size = 'md', className, children, 
   const getTextColor = () => {
     if (isPrimary) return '#0A0A31';
     if (isSecondary) return '#3E3A35';
-    return '#8B6F4E'; // outline gold tone
+    return '#E2B87C'; // outline gold #E2B87C
   };
   
   const getBaseColor = () => {
-    if (isPrimary) return '#C89B55';
+    if (isPrimary) return '#E2B87C'; // Base gold #E2B87C
     if (isSecondary) return '#D9CFBE';
-    return '#E2B87C';
+    return '#E2B87C'; // Gold #E2B87C
   };
   
   const getLineColor = () => {
-    if (isPrimary) return '#ffffff';
-    if (isSecondary) return '#ffffff';
-    return '#ffffff';
+    return '#D2D2D2'; // Silver from logo emblem
   };
 
   const getTintOpacity = () => {
