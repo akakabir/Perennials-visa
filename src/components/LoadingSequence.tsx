@@ -4,8 +4,28 @@ type SequencePhase = 1 | 2 | 3 | 4 | 5 | 6 | 'done';
 
 // [UI COMPONENT] LoadingSequence - Continuous 6-Phase Intro Sequence
 export function LoadingSequence() {
-  const [hasCompleted, setHasCompleted] = useState<boolean>(false);
-  const [phase, setPhase] = useState<SequencePhase>(1);
+  const [hasCompleted, setHasCompleted] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return sessionStorage.getItem('pv_intro_completed') === 'true';
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+  const [phase, setPhase] = useState<SequencePhase>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        if (sessionStorage.getItem('pv_intro_completed') === 'true') {
+          return 'done';
+        }
+      } catch {
+        // fallback
+      }
+    }
+    return 1;
+  });
   const [isReducedMotion, setIsReducedMotion] = useState<boolean>(false);
 
   useEffect(() => {
@@ -20,6 +40,11 @@ export function LoadingSequence() {
 
     if (isReducedMotion) {
       const timer = setTimeout(() => {
+        try {
+          sessionStorage.setItem('pv_intro_completed', 'true');
+        } catch {
+          // ignore
+        }
         setHasCompleted(true);
       }, 400);
       return () => clearTimeout(timer);
@@ -48,6 +73,11 @@ export function LoadingSequence() {
     } else if (phase === 6) {
       // Phase 6: Horizontal plane sweeps & wipes screen to reveal site (1300ms - majestic, slower)
       const timer = setTimeout(() => {
+        try {
+          sessionStorage.setItem('pv_intro_completed', 'true');
+        } catch {
+          // ignore
+        }
         setPhase('done');
         setHasCompleted(true);
       }, 1300);

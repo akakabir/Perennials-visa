@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Globe2, Menu, X, Plane, MessageCircle } from 'lucide-react';
 import { Button } from './Button';
 import { cn } from '../lib/utils';
@@ -12,6 +12,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const handleInquire = () => {
     const rawPhone = siteSettings?.whatsapp || '971501234567';
@@ -41,13 +42,15 @@ export function Navbar() {
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
     if (path.startsWith('/#')) {
+      e.preventDefault();
       const targetId = path.substring(2);
       if (location.pathname === '/') {
-        e.preventDefault();
         const el = document.getElementById(targetId);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth' });
         }
+      } else {
+        navigate(path);
       }
     } else if (path === '/' && location.pathname === '/') {
       e.preventDefault();
@@ -85,9 +88,9 @@ export function Navbar() {
 
           <nav className="hidden md:flex items-center justify-center gap-5 lg:gap-7 flex-1 mx-2">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.name}
-                href={link.path}
+                to={link.path}
                 onClick={(e) => handleNavClick(e, link.path)}
                 className={cn(
                   "text-xs lg:text-sm font-medium transition-colors relative group py-1",
@@ -99,7 +102,7 @@ export function Navbar() {
                   "absolute -bottom-0.5 left-0 h-0.5 bg-gradient-to-r from-[#E2B87C] to-[#8C8D8D] transition-all duration-300 rounded-full",
                   location.pathname === link.path ? "w-full" : "w-0 group-hover:w-full"
                 )} />
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -130,9 +133,9 @@ export function Navbar() {
           >
             <nav className="flex flex-col gap-3">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.name}
-                  href={link.path}
+                  to={link.path}
                   className="text-base font-medium text-[#7A7369] hover:text-[#5C564D] transition-colors py-2 border-b border-[#CACACB]/10"
                   onClick={(e) => {
                     handleNavClick(e, link.path);
@@ -140,7 +143,7 @@ export function Navbar() {
                   }}
                 >
                   {link.name}
-                </a>
+                </Link>
               ))}
               <Button className="mt-4 w-full flex items-center justify-center gap-2" onClick={() => { 
                 setMobileMenuOpen(false); 

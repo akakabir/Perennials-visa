@@ -8,6 +8,16 @@ export function Footer() {
   const { siteSettings } = useAppContext();
   const [logoError, setLogoError] = React.useState(false);
 
+  const handleHashClick = (e: React.MouseEvent, targetId: string) => {
+    if (window.location.pathname === '/') {
+      e.preventDefault();
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
   return (
     <footer className="bg-[#F7F5F0] border-t border-[#E6DFD5] pt-16 pb-8 relative z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
@@ -33,17 +43,17 @@ export function Footer() {
           <div>
             <h4 className="text-[#3E3A35] font-medium mb-6">Quick Links</h4>
             <ul className="space-y-3 text-sm text-[#7A7369]/70">
-              <li><a href="/#plans" className="hover:text-[#5C564D] transition-colors">Visa Plans</a></li>
+              <li><Link to="/#plans" onClick={(e) => handleHashClick(e, 'plans')} className="hover:text-[#5C564D] transition-colors">Visa Plans</Link></li>
               <li><Link to="/about" className="hover:text-[#5C564D] transition-colors">About Us</Link></li>
               <li><Link to="/faqs" className="hover:text-[#5C564D] transition-colors">FAQs</Link></li>
-              <li><a href="/#contact" className="hover:text-[#5C564D] transition-colors">Contact Form</a></li>
+              <li><Link to="/#contact" onClick={(e) => handleHashClick(e, 'contact')} className="hover:text-[#5C564D] transition-colors">Contact Form</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-[#3E3A35] font-medium mb-6">Support & Reviews</h4>
             <ul className="space-y-3 text-sm text-[#7A7369]/70">
-              <li><a href="/#reviews" className="hover:text-[#5C564D] transition-colors">Client Reviews</a></li>
+              <li><Link to="/#reviews" onClick={(e) => handleHashClick(e, 'reviews')} className="hover:text-[#5C564D] transition-colors">Client Reviews</Link></li>
               <li><Link to="/faqs" className="hover:text-[#5C564D] transition-colors">Help & FAQ</Link></li>
               <li><a href={`https://wa.me/${siteSettings.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="hover:text-[#5C564D] transition-colors">WhatsApp Support</a></li>
             </ul>

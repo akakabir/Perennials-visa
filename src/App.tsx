@@ -36,6 +36,21 @@ function ScrollToTop() {
   React.useEffect(() => {
     if (!hash) {
       window.scrollTo(0, 0);
+    } else {
+      const id = hash.replace(/^#/, '');
+      const scrollToElement = () => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+          return true;
+        }
+        return false;
+      };
+
+      if (!scrollToElement()) {
+        const timer = setTimeout(scrollToElement, 150);
+        return () => clearTimeout(timer);
+      }
     }
   }, [pathname, hash]);
   return null;

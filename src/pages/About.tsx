@@ -137,12 +137,12 @@ export default function About() {
             Explore our curated visa plans or message us directly on WhatsApp to get tailored guidance for your destination.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="/#plans">
+            <Link to="/#plans">
               <Button size="lg" className="flex items-center gap-2">
                 <span>Explore Visa Plans</span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
-            </a>
+            </Link>
             <Button size="lg" onClick={handleWhatsApp} className="flex items-center gap-2">
               <MessageCircle className="w-4 h-4" />
               <span>Inquire on WhatsApp</span>
