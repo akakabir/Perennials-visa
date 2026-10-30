@@ -478,14 +478,21 @@ Please let me know the document checklist and how we can proceed with this appli
 
       <section className="relative pt-20 pb-32 overflow-hidden flex items-center justify-center min-h-[90vh]">
         {/* Hero background: world-map & landmark artwork, softened so the headline stays readable */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
+        <div
+          className="absolute inset-0 z-0 pointer-events-none"
+          style={{
+            // Feather the image into the page at the top and bottom so there is no hard edge
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 22%, #000 72%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, transparent 0%, #000 22%, #000 72%, transparent 100%)',
+          }}
+        >
           <img
             src="/hero-background.png"
             alt=""
             aria-hidden="true"
             className="w-full h-full object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#FAF8F4]/55 via-[#FAF8F4]/25 to-[#FAF8F4]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FAF8F4]/45 via-[#FAF8F4]/25 to-[#FAF8F4]/60" />
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 text-center">
           <motion.div

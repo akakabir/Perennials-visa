@@ -108,20 +108,40 @@ Keep responses concise, clear, and under 150 words.`
   }
 
   try {
-    const groqModel = process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${groqKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: groqModel,
-        messages: fullMessages,
-        max_tokens: 300,
-        temperature: 0.7
-      })
-    });
+    let groqModel = (process.env.GROQ_MODEL || 'openai/gpt-oss-20b').trim();
+    if (groqModel.startsWith('chatgpt/')) {
+      groqModel = groqModel.replace(/^chatgpt\//, 'openai/');
+    }
+    if (groqModel === 'openai/oss-120b') {
+      groqModel = 'openai/gpt-oss-120b';
+    }
+    if (groqModel === 'openai/oss-20b') {
+      groqModel = 'openai/gpt-oss-20b';
+    }
+
+    const callGroq = async (model: string) => {
+      return fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          messages: fullMessages,
+          max_tokens: 300,
+          temperature: 0.7
+        })
+      });
+    };
+
+    let response = await callGroq(groqModel);
+
+    // If model not found (404) or bad request due to model (400), fall back to openai/gpt-oss-20b
+    if (!response.ok && (response.status === 404 || response.status === 400) && groqModel !== 'openai/gpt-oss-20b') {
+      console.warn(`Groq model '${groqModel}' returned ${response.status}, falling back to 'openai/gpt-oss-20b'`);
+      response = await callGroq('openai/gpt-oss-20b');
+    }
 
     if (!response.ok) {
       const errorText = await response.text();

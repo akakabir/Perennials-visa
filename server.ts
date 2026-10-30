@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ override: true });
 
 // Import single-source handlers from /api
 import chatHandler from './api/chat';

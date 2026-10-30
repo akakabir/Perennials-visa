@@ -70,7 +70,9 @@ ${plansInfo || 'None currently.'}
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || "Thank you for reaching out. How else can I assist your visa journey?";
+    const choice = data.choices?.[0]?.message;
+    const content = (choice?.content || choice?.reasoning || '').trim();
+    return content || "Thank you for reaching out. How else can I assist your visa journey?";
   };
 
   const handleSend = async (e: React.FormEvent) => {
