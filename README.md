@@ -18,7 +18,6 @@ A premium, production-grade Visa Consultancy web application built with React 19
 - **Serverless API Layer (`/api`)**: Vercel-compatible serverless functions:
   - `/api/chat`: Hardened AI chat proxy stripping client system prompts, constructing context dynamically from active visa plans, and enforcing strict rate limits and origin checks.
   - `/api/health`: Live health probes verifying Firestore read latency and Groq AI availability, aggregating 24-hour service metrics.
-  - `/api/application-status`: Minimal, rate-limited public endpoint returning only `{ referenceId, firstName, planName, status }`.
   - `/api/recovery-code/generate`: Issues high-entropy single-use recovery codes, securely hashed with scrypt.
   - `/api/recovery-code/redeem`: Rate-limited recovery endpoint allowing admins to regain access via single-use codes.
   - `/api/admin/*`: Verification, creation, updating, and deletion endpoints for admin users with superadmin authorization.

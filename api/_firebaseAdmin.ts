@@ -1,39 +1,39 @@
 import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
 
-const projectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
+const projectId = process.env.FIREBASE_PROJECT_ID || 'perennials-visa-288d6';
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 if (privateKey) {
-  privateKey = privateKey.replace(/\\n/g, '\n');
+  privateKey = privateKey.trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
 }
 
 let app: App;
 if (!getApps().length) {
-  if (clientEmail && privateKey) {
-    app = initializeApp({
-      credential: cert({
-        projectId,
-        clientEmail,
-        privateKey
-      }),
-      projectId
-    });
-  } else {
-    app = initializeApp({
-      projectId
-    });
+  try {
+    if (clientEmail && privateKey) {
+      app = initializeApp({
+        credential: cert({ projectId, clientEmail, privateKey }),
+        projectId
+      });
+    } else {
+      app = initializeApp({ projectId });
+    }
+  } catch (err) {
+    // Bad FIREBASE_PRIVATE_KEY must not crash every API route (chat, health)
+    console.error('Firebase admin init with credentials failed, check FIREBASE_PRIVATE_KEY:', err);
+    app = initializeApp({ projectId }, 'fallback');
   }
 } else {
   app = getApp();
 }
 
 export const adminAuth: Auth = getAuth(app);
-export const adminDb: Firestore = firebaseConfig.firestoreDatabaseId
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(app);
+const databaseId = process.env.FIRESTORE_DATABASE_ID || '(default)';
+export const adminDb: Firestore = databaseId === '(default)'
+  ? getFirestore(app)
+  : getFirestore(app, databaseId);
 
 export interface VerifiedAdmin {
   uid: string;

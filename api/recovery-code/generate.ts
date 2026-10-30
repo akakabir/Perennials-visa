@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { adminDb, verifyAdminRequest } from '../_firebaseAdmin';
+import { adminDb, verifyAdminRequest } from '../_firebaseAdmin.js';
 
 export function hashRecoveryCode(code: string, salt: string): string {
   const normalized = code.replace(/[^A-Za-z0-9]/g, '').toUpperCase();

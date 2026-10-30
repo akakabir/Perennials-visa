@@ -1,4 +1,4 @@
-import { adminDb } from './_firebaseAdmin';
+import { adminDb } from './_firebaseAdmin.js';
 
 let lastLoggedTime = 0;
 

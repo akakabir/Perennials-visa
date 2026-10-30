@@ -7,7 +7,6 @@ dotenv.config({ override: true });
 // Import single-source handlers from /api
 import chatHandler from './api/chat';
 import healthHandler from './api/health';
-import applicationStatusHandler from './api/application-status';
 import recoveryGenerateHandler from './api/recovery-code/generate';
 import recoveryRedeemHandler from './api/recovery-code/redeem';
 import adminVerifyHandler from './api/admin/verify';
@@ -29,7 +28,6 @@ const adapt = (handler: (req: any, res: any) => any) => (req: express.Request, r
 // Mount API routes directly from /api handlers
 app.all('/api/chat', adapt(chatHandler));
 app.all('/api/health', adapt(healthHandler));
-app.all('/api/application-status', adapt(applicationStatusHandler));
 app.all('/api/recovery-code/generate', adapt(recoveryGenerateHandler));
 app.all('/api/recovery-code/redeem', adapt(recoveryRedeemHandler));
 app.all('/api/admin/verify', adapt(adminVerifyHandler));

@@ -31,24 +31,12 @@ type StatusCheckDoc = {
   timestamp: string;
 };
 
-type AppStatusLookupResult = {
-  referenceId: string;
-  firstName: string;
-  planName: string;
-  status: string;
-};
-
 export default function Status() {
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentChecks, setRecentChecks] = useState<StatusCheckDoc[]>([]);
   const [uptimePercent, setUptimePercent] = useState<number>(100);
 
-  // Application Status Lookup
-  const [appRefInput, setAppRefInput] = useState('');
-  const [appLookupLoading, setAppLookupLoading] = useState(false);
-  const [appLookupResult, setAppLookupResult] = useState<AppStatusLookupResult | null>(null);
-  const [appLookupError, setAppLookupError] = useState('');
 
   const fetchHealth = async () => {
     setLoading(true);
@@ -99,29 +87,6 @@ export default function Status() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleLookupApp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!appRefInput.trim()) return;
-
-    setAppLookupLoading(true);
-    setAppLookupError('');
-    setAppLookupResult(null);
-
-    try {
-      const res = await fetch(`/api/application-status?ref=${encodeURIComponent(appRefInput.trim())}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setAppLookupError(data.error || 'No application record found for this reference ID.');
-      } else {
-        setAppLookupResult(data);
-      }
-    } catch (err: any) {
-      setAppLookupError(err.message || 'Failed to check status. Please try again.');
-    } finally {
-      setAppLookupLoading(false);
-    }
-  };
-
   const overall = status?.status || 'operational';
 
   return (
@@ -132,11 +97,11 @@ export default function Status() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#FAF8F4] border border-[#E2B87C]/40 rounded-md text-[#E2B87C] font-mono text-xs font-bold uppercase tracking-wider mb-4">
             <ShieldCheck className="w-4 h-4" />
-            <span>INFRASTRUCTURE & TRACKING</span>
+            <span>INFRASTRUCTURE</span>
           </div>
           <h1 className="text-3xl md:text-5xl font-bold text-[#3E3A35] mb-4">System Status</h1>
           <p className="text-[#7A7369] max-w-xl mx-auto">
-            Live uptime, platform latency, and official visa application tracking.
+            Live uptime and platform latency.
           </p>
         </div>
 
@@ -237,68 +202,6 @@ export default function Status() {
           </div>
         </div>
 
-        {/* Public Application Tracker (Single Source of Truth via /api/application-status) */}
-        <div className="bg-[#FAF8F4] border border-[#E2B87C]/50 rounded-3xl p-8 shadow-sm">
-          <div className="max-w-xl mx-auto text-center mb-6">
-            <h2 className="text-2xl font-serif font-bold text-[#3E3A35] mb-2">Track Your Visa Application</h2>
-            <p className="text-xs text-[#7A7369]">
-              Enter your reference number (e.g. <code className="bg-[#FCFBF8] px-1 py-0.5 border rounded text-[#3E3A35]">APP-123456</code>) to view your verified live status.
-            </p>
-          </div>
-
-          <form onSubmit={handleLookupApp} className="max-w-lg mx-auto flex gap-2 mb-6">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7A7369]" />
-              <input
-                type="text"
-                required
-                value={appRefInput}
-                onChange={(e) => setAppRefInput(e.target.value.toUpperCase())}
-                placeholder="APP-XXXXXX"
-                className="w-full bg-white border border-[#D9CFBE] text-[#3E3A35] rounded-xl pl-10 pr-4 py-2.5 text-sm font-mono tracking-wider outline-none focus:border-[#E2B87C] uppercase"
-              />
-            </div>
-            <Button type="submit" disabled={appLookupLoading} className="flex items-center gap-1.5 shrink-0">
-              {appLookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-              <span>Track</span>
-            </Button>
-          </form>
-
-          {appLookupError && (
-            <div className="max-w-lg mx-auto p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-600 text-xs text-center">
-              {appLookupError}
-            </div>
-          )}
-
-          {appLookupResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-lg mx-auto bg-white border border-[#E6DFD5] rounded-2xl p-6 shadow-md"
-            >
-              <div className="flex items-center justify-between border-b border-[#E6DFD5] pb-4 mb-4">
-                <div>
-                  <span className="text-[11px] font-mono text-[#7A7369] uppercase">Application Reference</span>
-                  <h3 className="text-lg font-mono font-bold text-[#3E3A35]">{appLookupResult.referenceId}</h3>
-                </div>
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#E2B87C]/20 text-[#3E3A35] border border-[#E2B87C]/40">
-                  {appLookupResult.status}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <span className="text-[#7A7369] block mb-1">Applicant Name</span>
-                  <span className="font-semibold text-[#3E3A35] text-sm">{appLookupResult.firstName}</span>
-                </div>
-                <div>
-                  <span className="text-[#7A7369] block mb-1">Visa Category</span>
-                  <span className="font-semibold text-[#3E3A35] text-sm">{appLookupResult.planName}</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </div>
       </main>
 
       <Footer />

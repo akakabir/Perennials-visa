@@ -235,24 +235,6 @@ async function runAcceptanceTests() {
     results.push({ test: '8. Health check', passed: false, details: err.message });
   }
 
-  // Test 9: Public application status lookup (/api/application-status)
-  try {
-    const noRef = await fetch(`${BASE_URL}/api/application-status`);
-    const noRefBlocked = noRef.status === 400;
-
-    const notFoundRef = await fetch(`${BASE_URL}/api/application-status?ref=NON-EXISTENT`);
-    const notFoundData = await notFoundRef.json();
-    const notFoundOk = notFoundRef.status === 404;
-
-    results.push({
-      test: '9. Public application status endpoint minimal disclosure & validation',
-      passed: noRefBlocked && notFoundOk,
-      details: `noRefStatus=${noRef.status}, notFoundStatus=${notFoundRef.status}`
-    });
-  } catch (err: any) {
-    results.push({ test: '9. Application status endpoint check', passed: false, details: err.message });
-  }
-
   // Print results
   console.log('----------------------------------------------------');
   let allPassed = true;

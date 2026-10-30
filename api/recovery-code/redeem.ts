@@ -1,7 +1,7 @@
 import crypto from 'crypto';
-import { adminAuth, adminDb } from '../_firebaseAdmin';
-import { checkRateLimit, getClientIp } from '../_rateLimit';
-import { hashRecoveryCode } from './generate';
+import { adminAuth, adminDb } from '../_firebaseAdmin.js';
+import { checkRateLimit, getClientIp } from '../_rateLimit.js';
+import { hashRecoveryCode } from './generate.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
