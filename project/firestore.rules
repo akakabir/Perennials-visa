@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.status != 'inactive';
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll(['name', 'rating', 'comment', 'status', 'date']) &&
+        data.status == 'pending' &&
+        data.rating is number &&
+        data.rating >= 1 &&
+        data.rating <= 5 &&
+        data.name is string &&
+        data.name.size() > 0 &&
+        data.name.size() <= 100 &&
+        data.comment is string &&
+        data.comment.size() > 0 &&
+        data.comment.size() <= 2000;
+    }
+
+    function isValidApplication(data) {
+      return data.keys().hasOnly(['id', 'referenceId', 'name', 'email', 'phone', 'planId', 'submittedDate', 'status', 'adminNote']) &&
+        data.keys().hasAll(['id', 'referenceId', 'name', 'email', 'phone', 'planId', 'submittedDate', 'status']) &&
+        data.status == 'New' &&
+        data.id is string && data.id.size() <= 128 &&
+        data.referenceId is string && data.referenceId.size() <= 64 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 128 &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 256 &&
+        data.phone is string && data.phone.size() <= 64 &&
+        data.planId is string && data.planId.size() <= 64 &&
+        data.submittedDate is string && data.submittedDate.size() <= 64 &&
+        (!('adminNote' in data) || (data.adminNote is string && data.adminNote.size() <= 1000));
+    }
+
+    // Public readable, admin-only write
+    match /visaPlans/{planId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /processSteps/{stepId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /siteSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Reviews: Public read approved, public create pending, admin update/delete
+    match /reviews/{reviewId} {
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if isValidReview(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Applications: Public CREATE only (status 'New' with validation); Read/Update/Delete admin only
+    match /applications/{appId} {
+      allow read: if isAdmin();
+      allow create: if isValidApplication(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Admin accounts collection: read-only for admins, all writes via /api/admin/* server endpoints
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Email center collections (templates and drafts only)
+    match /emailTemplates/{templateId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /emailDrafts/{draftId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Status checks collection for 24h uptime reporting
+    match /statusChecks/{checkId} {
+      allow read: if true;
+      allow write: if false; // Server-only via firebase-admin
+    }
+
+    // Server-only collections: No client access
+    match /adminRecovery/{recoveryId} {
+      allow read, write: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow read, write: if false;
+    }
+  }
+}

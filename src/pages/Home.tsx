@@ -477,6 +477,16 @@ Please let me know the document checklist and how we can proceed with this appli
       </AnimatePresence>
 
       <section className="relative pt-20 pb-32 overflow-hidden flex items-center justify-center min-h-[90vh]">
+        {/* Hero background: world-map & landmark artwork, softened so the headline stays readable */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <img
+            src="/hero-background.png"
+            alt=""
+            aria-hidden="true"
+            className="w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FAF8F4]/55 via-[#FAF8F4]/25 to-[#FAF8F4]" />
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
