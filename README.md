@@ -12,16 +12,16 @@ A premium, production-grade Visa Consultancy web application built with React 19
   - `visaPlans`, `processSteps`, and `siteSettings/global`: Public read, admin-only write.
   - `reviews`: Public read of approved reviews, public creation with pending status and validation; admin-only moderation.
   - `applications`: Public creation with strict schema validation (`status == 'New'`); admin-only read/update/delete.
-  - `admins`, `emailTemplates`, `emailDrafts`, `emailHistory`: Admin-only access.
+  - `admins`: Admin-only read, no client writes (all admin management handled through `/api/admin/*` endpoints).
+  - `emailTemplates`, `emailDrafts`: Admin-only access.
   - `adminRecovery`, `auditLogs`, `statusChecks`: Server-side only via `firebase-admin` (client access completely blocked).
 - **Serverless API Layer (`/api`)**: Vercel-compatible serverless functions:
   - `/api/chat`: Hardened AI chat proxy stripping client system prompts, constructing context dynamically from active visa plans, and enforcing strict rate limits and origin checks.
   - `/api/health`: Live health probes verifying Firestore read latency and Groq AI availability, aggregating 24-hour service metrics.
   - `/api/application-status`: Minimal, rate-limited public endpoint returning only `{ referenceId, firstName, planName, status }`.
-  - `/api/send-email`: Resend email dispatcher with template variable substitution and dispatch logging.
   - `/api/recovery-code/generate`: Issues high-entropy single-use recovery codes, securely hashed with scrypt.
   - `/api/recovery-code/redeem`: Rate-limited recovery endpoint allowing admins to regain access via single-use codes.
-  - `/api/admin/*`: Verification, invitation, and management endpoints for admin users.
+  - `/api/admin/*`: Verification, creation, updating, and deletion endpoints for admin users with superadmin authorization.
 - **Payments**: Out of scope by design. Consultation and processing fees are discussed and arranged directly between applicants and visa specialists.
 
 ---
@@ -34,14 +34,10 @@ Configure these in `.env` for local development and in the Vercel Project Settin
 | :--- | :--- | :--- |
 | `APP_URL` | Base public URL of the application | `https://perennialsvisa.com` |
 | `GROQ_API_KEY` | API Key from console.groq.com | `gsk_...` |
-| `GROQ_MODEL` | Groq model identifier | `llama-3.3-70b-versatile` |
-| `FIREBASE_PROJECT_ID` | GCP / Firebase Project ID | `robust-victor-cxctm` |
+| `GROQ_MODEL` | Groq model identifier | `openai/gpt-oss-20b` |
+| `FIREBASE_PROJECT_ID` | GCP / Firebase Project ID | `perennials-visa-288d6` |
 | `FIREBASE_CLIENT_EMAIL` | Firebase Admin Service Account Email | `firebase-adminsdk-...@iam.gserviceaccount.com` |
 | `FIREBASE_PRIVATE_KEY` | Firebase Admin Private Key (with `\n`) | `-----BEGIN PRIVATE KEY-----\n...` |
-| `RESEND_API_KEY` | API key from resend.com for emails | `re_...` |
-| `RESEND_FROM_EMAIL` | Verified sender email for notifications | `Perennials Visa <info@perennialsvisa.com>` |
-| `UPSTASH_REDIS_REST_URL` | *(Optional)* Upstash Redis URL for rate limiting | `https://...upstash.io` |
-| `UPSTASH_REDIS_REST_TOKEN`| *(Optional)* Upstash Redis REST Token | `AX...` |
 
 ---
 
@@ -166,14 +162,13 @@ If migrating the application to a new Firebase project:
    - `siteSettings`: Global branding, contact info, and company metadata (`global` doc).
    - `emailTemplates`: Prepared email templates for applicant updates.
    - `emailDrafts`: Saved email compositions.
-   - `emailHistory`: Log of dispatched emails via Resend.
    - `adminRecovery`: Salted scrypt hashes for single-use recovery codes (server-only).
    - `auditLogs`: Security and authentication audit events (server-only).
    - `statusChecks`: System uptime and latency snapshots (server-only).
 5. **Seed Initial Data**:
    - Run the initial seed script:
      ```bash
-     npx tsx scripts/seed-client.ts
+     npx tsx scripts/seed.ts
      ```
    - Run the admin bootstrap script to create the first admin user:
      ```bash

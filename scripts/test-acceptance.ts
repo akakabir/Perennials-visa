@@ -153,22 +153,22 @@ async function runAcceptanceTests() {
     results.push({ test: '4. Recovery code check', passed: false, details: err.message });
   }
 
-  // Test 5: /api/send-email auth check
+  // Test 5: /api/admin/create auth check
   try {
-    const unauthEmail = await fetch(`${BASE_URL}/api/send-email`, {
+    const unauthAdmin = await fetch(`${BASE_URL}/api/admin/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: 'user@example.com', subject: 'Test', html: '<p>Test</p>' })
+      body: JSON.stringify({ email: 'user@example.com' })
     });
-    const emailRequiresAuth = unauthEmail.status === 401;
+    const adminRequiresAuth = unauthAdmin.status === 403 || unauthAdmin.status === 401;
 
     results.push({
-      test: '5. /api/send-email endpoint authentication enforcement',
-      passed: emailRequiresAuth,
-      details: `unauthenticated request returned HTTP ${unauthEmail.status}`
+      test: '5. /api/admin/create endpoint authentication enforcement',
+      passed: adminRequiresAuth,
+      details: `unauthenticated request returned HTTP ${unauthAdmin.status}`
     });
   } catch (err: any) {
-    results.push({ test: '5. Email endpoint auth check', passed: false, details: err.message });
+    results.push({ test: '5. Admin create endpoint auth check', passed: false, details: err.message });
   }
 
   // Test 6: Grep codebase for "payment", "Pay Securely", "256-bit", "/payment"

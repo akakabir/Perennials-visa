@@ -80,16 +80,6 @@ export type EmailDraft = {
   templateId?: string;
 };
 
-export type EmailRecord = {
-  id: string;
-  recipient: string;
-  subject: string;
-  templateName?: string;
-  date: string;
-  status: 'Sent' | 'Failed';
-  errorMsg?: string;
-};
-
 export type SiteSettings = {
   siteName: string;
   logoUrl: string;

@@ -61,7 +61,7 @@
         "uid": { "type": "string" },
         "name": { "type": "string" },
         "email": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "superadmin", "manager"] },
+        "role": { "type": "string", "enum": ["admin", "superadmin"] },
         "status": { "type": "string", "enum": ["active", "inactive"] },
         "createdAt": { "type": "string" }
       },

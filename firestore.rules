@@ -75,21 +75,18 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Admin accounts collection
+    // Admin accounts collection: read-only for admins, all writes via /api/admin/* server endpoints
     match /admins/{adminId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
-    // Email center collections
+    // Email center collections (templates and drafts only)
     match /emailTemplates/{templateId} {
       allow read, write: if isAdmin();
     }
 
     match /emailDrafts/{draftId} {
-      allow read, write: if isAdmin();
-    }
-
-    match /emailHistory/{historyId} {
       allow read, write: if isAdmin();
     }
 

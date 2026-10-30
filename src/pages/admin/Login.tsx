@@ -41,7 +41,26 @@ export default function Login() {
     setSuccess('');
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      let resolvedEmail = email.trim();
+      if (!resolvedEmail.includes('@')) {
+        try {
+          const res = await fetch('/api/admin/resolve-identifier', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: resolvedEmail })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.email) {
+              resolvedEmail = data.email;
+            }
+          }
+        } catch {
+          // Keep input as fallback
+        }
+      }
+
+      const userCredential = await signInWithEmailAndPassword(auth, resolvedEmail, password);
       const user = userCredential.user;
 
       // Verify admin role in Firestore
@@ -79,11 +98,11 @@ export default function Login() {
     } catch (err: any) {
       console.error('Firebase Auth Login error:', err);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setError('Invalid email or password.');
+        setError('Invalid username, email, or password.');
       } else if (err.code === 'auth/too-many-requests') {
         setError('Too many failed login attempts. Please wait a few minutes or reset your password.');
       } else if (err.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
+        setError('Please enter a valid username or email address.');
       } else {
         setError(err.message || 'Login failed. Please check your credentials.');
       }
@@ -95,7 +114,7 @@ export default function Login() {
   const handleEmailReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recoveryEmail.trim()) {
-      setError('Please enter your administrator email address.');
+      setError('Please enter your administrator username or email address.');
       return;
     }
     setLoading(true);
@@ -103,12 +122,27 @@ export default function Login() {
     setSuccess('');
 
     try {
-      await sendPasswordResetEmail(auth, recoveryEmail.trim());
-      setSuccess('If an administrator account exists with this email, a password reset link has been dispatched.');
+      let targetEmail = recoveryEmail.trim();
+      if (!targetEmail.includes('@')) {
+        try {
+          const res = await fetch('/api/admin/resolve-identifier', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: targetEmail })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.email) targetEmail = data.email;
+          }
+        } catch {}
+      }
+
+      await sendPasswordResetEmail(auth, targetEmail);
+      setSuccess('If an administrator account exists for this username or email, a password reset link has been dispatched.');
     } catch (err: any) {
       console.error('Password reset error:', err);
       // Generic response for security
-      setSuccess('If an administrator account exists with this email, a password reset link has been dispatched.');
+      setSuccess('If an administrator account exists for this username or email, a password reset link has been dispatched.');
     } finally {
       setLoading(false);
     }
@@ -134,11 +168,26 @@ export default function Login() {
     setSuccess('');
 
     try {
+      let targetEmail = recoveryEmail.trim();
+      if (!targetEmail.includes('@')) {
+        try {
+          const res = await fetch('/api/admin/resolve-identifier', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: targetEmail })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.email) targetEmail = data.email;
+          }
+        } catch {}
+      }
+
       const res = await fetch('/api/recovery-code/redeem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: recoveryEmail.trim(),
+          email: targetEmail,
           code: recoveryCode.trim(),
           newPassword
         })
@@ -194,13 +243,16 @@ export default function Login() {
         {forgotMode === 'none' && (
           <form onSubmit={handleLogin} className="space-y-4 relative z-10">
             <div>
-              <label className="block text-xs font-medium text-[#7A7369] mb-1.5">Admin Email</label>
+              <label className="block text-xs font-medium text-[#7A7369] mb-1.5">Username or Email</label>
               <input
-                type="email"
+                type="text"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@perennialsvisa.com"
+                placeholder="Username or admin@perennialsvisa.com"
                 className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#E2B87C] transition-colors placeholder:text-[#7A7369]/40"
               />
             </div>
@@ -255,14 +307,17 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#7A7369] mb-1.5">Email Address</label>
+              <label className="block text-xs font-medium text-[#7A7369] mb-1.5">Username or Email</label>
               <input
-                type="email"
+                type="text"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={recoveryEmail}
                 onChange={(e) => setRecoveryEmail(e.target.value)}
-                placeholder="admin@perennialsvisa.com"
-                className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#E2B87C] transition-colors"
+                placeholder="Username or admin@perennialsvisa.com"
+                className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#E2B87C] transition-colors placeholder:text-[#7A7369]/40"
               />
             </div>
 
@@ -309,14 +364,17 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#7A7369] mb-1.5">Admin Email</label>
+              <label className="block text-xs font-medium text-[#7A7369] mb-1.5">Username or Email</label>
               <input
-                type="email"
+                type="text"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={recoveryEmail}
                 onChange={(e) => setRecoveryEmail(e.target.value)}
-                placeholder="admin@perennialsvisa.com"
-                className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-3.5 py-2 text-sm outline-none focus:border-[#E2B87C] transition-colors"
+                placeholder="Username or admin@perennialsvisa.com"
+                className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-3.5 py-2 text-sm outline-none focus:border-[#E2B87C] transition-colors placeholder:text-[#7A7369]/40"
               />
             </div>
 

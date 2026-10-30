@@ -7,6 +7,7 @@ import TiltCard from '../components/TiltCard';
 import Stepper, { Step } from '../components/Stepper';
 import { useAppContext } from '../store/AppContext';
 import { VisaPlan, Price } from '../types';
+import { generateReferenceId } from '../lib/referenceId';
 
 // [UI COMPONENT] Home - Renders the Home view
 export default function Home() {
@@ -86,7 +87,7 @@ Please let me know the document checklist and how we can proceed with this appli
 
   const handleSendWhatsApp = async (plan: VisaPlan) => {
     setIsSubmittingApp(true);
-    const refId = `APP-${Date.now().toString().slice(-6)}`;
+    const refId = generateReferenceId('APP');
     const message = buildWhatsAppMessage(
       plan,
       selectedCurrency,
@@ -437,7 +438,7 @@ Please let me know the document checklist and how we can proceed with this appli
                       setFormError('');
                       setIsSubmittingApp(true);
                       const id = Date.now().toString();
-                      const refId = `APP-${id.slice(-6)}`;
+                      const refId = generateReferenceId('APP');
                       try {
                         await addApplication({
                           id,
@@ -823,13 +824,13 @@ Please let me know the document checklist and how we can proceed with this appli
                 try {
                   await addApplication({
                     id,
-                    referenceId: `LEAD-${id.slice(-6)}`,
+                    referenceId: generateReferenceId('LEAD'),
                     name: data.name as string,
                     email: data.email as string,
                     phone: data.phone as string,
                     planId: 'General Inquiry',
                     submittedDate: new Date().toISOString(),
-                    status: 'Submitted',
+                    status: 'New',
                     adminNote: `Lead Assessment\nDestination: ${data.destination}\nTravel Date: ${data.travelDate}\nPurpose: ${data.purpose}`
                   });
                   setAssessmentSubmitted(true);

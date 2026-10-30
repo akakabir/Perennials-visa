@@ -6,7 +6,7 @@ import {
   AlertCircle, CheckCircle, Loader2, RefreshCw, Mail, Eye, EyeOff
 } from 'lucide-react';
 import { auth } from '../../lib/firebase';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail, sendPasswordResetEmail } from 'firebase/auth';
 
 export default function SettingsManager() {
   const {
@@ -45,7 +45,7 @@ export default function SettingsManager() {
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
   const [newAdminName, setNewAdminName] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
-  const [newAdminRole, setNewAdminRole] = useState<'admin' | 'superadmin' | 'manager'>('admin');
+  const [newAdminRole, setNewAdminRole] = useState<'admin' | 'superadmin'>('admin');
   const [adminCreating, setAdminCreating] = useState(false);
   const [adminModalError, setAdminModalError] = useState('');
   const [adminModalSuccess, setAdminModalSuccess] = useState('');
@@ -220,6 +220,12 @@ export default function SettingsManager() {
         name: newAdminName.trim() || undefined,
         role: newAdminRole
       });
+
+      try {
+        await sendPasswordResetEmail(auth, newAdminEmail.trim());
+      } catch (emailErr) {
+        console.warn('Password setup email dispatch notice:', emailErr);
+      }
 
       setAdminModalSuccess(`Admin account created for ${newAdminEmail}. A setup invite email has been sent.`);
       setNewAdminName('');
@@ -539,7 +545,6 @@ export default function SettingsManager() {
                   >
                     <option value="admin">Admin</option>
                     <option value="superadmin">Superadmin</option>
-                    <option value="manager">Manager</option>
                   </select>
                 </div>
                 <div>
@@ -627,7 +632,6 @@ export default function SettingsManager() {
                 >
                   <option value="admin">Admin</option>
                   <option value="superadmin">Superadmin</option>
-                  <option value="manager">Manager</option>
                 </select>
               </div>
 

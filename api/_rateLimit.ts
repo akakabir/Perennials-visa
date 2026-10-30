@@ -1,4 +1,4 @@
-// In-memory sliding window rate limiter with optional Upstash Redis fallback
+// In-memory sliding window rate limiter
 interface RateLimitRecord {
   count: number;
   resetAt: number;
@@ -21,39 +21,7 @@ export async function checkRateLimit(
   limit: number,
   windowSeconds: number
 ): Promise<{ allowed: boolean; remaining: number }> {
-  // If Upstash Redis is configured
-  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
-  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-  if (upstashUrl && upstashToken) {
-    try {
-      const sanitizedKey = `pv_rl:${key.replace(/[^a-zA-Z0-9_:-]/g, '_')}`;
-      const res = await fetch(`${upstashUrl}/pipeline`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${upstashToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify([
-          ['INCR', sanitizedKey],
-          ['EXPIRE', sanitizedKey, windowSeconds]
-        ])
-      });
-
-      if (res.ok) {
-        const results = await res.json();
-        const currentCount = results[0]?.result || 1;
-        return {
-          allowed: currentCount <= limit,
-          remaining: Math.max(0, limit - currentCount)
-        };
-      }
-    } catch (err) {
-      console.warn('Upstash rate limit fallback to memory:', err);
-    }
-  }
-
-  // Fallback to local in-memory sliding counter
+  // Local in-memory sliding counter
   const now = Date.now();
   const record = memoryStore.get(key);
 

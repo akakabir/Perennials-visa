@@ -108,7 +108,7 @@ Keep responses concise, clear, and under 150 words.`
   }
 
   try {
-    const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+    const groqModel = process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {

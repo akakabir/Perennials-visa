@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { adminAuth, adminDb } from '../api/_firebaseAdmin';
 
 async function main() {
@@ -41,6 +42,7 @@ async function main() {
     await adminDb.collection('admins').doc(uid).set({
       uid,
       email,
+      username: email.split('@')[0].toLowerCase(),
       role,
       status: 'active',
       updatedAt: new Date().toISOString()

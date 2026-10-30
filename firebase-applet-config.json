@@ -1,12 +1,12 @@
 {
-  "projectId": "robust-victor-cxctm",
-  "appId": "1:183260515879:web:233b129d327110cf30c802",
-  "apiKey": "AIzaSyBffW4y1Br3bS6QpkvRMKOlu7HD9Yb9cn4",
-  "authDomain": "robust-victor-cxctm.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-perennialsvisa-5ebc79ea-33d2-40a7-bc99-e6b52487d4e2",
-  "storageBucket": "robust-victor-cxctm.firebasestorage.app",
-  "messagingSenderId": "183260515879",
-  "measurementId": "",
+  "projectId": "perennials-visa-288d6",
+  "appId": "1:462554813713:web:d877d355e8162fe87468b0",
+  "apiKey": "AIzaSyCAX1rPGzlsgPOJB8aXdJcNW2dn5Oab3hM",
+  "authDomain": "perennials-visa-288d6.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "perennials-visa-288d6.firebasestorage.app",
+  "messagingSenderId": "462554813713",
+  "measurementId": "G-CG0BKCJ1CH",
   "oAuthClientId": "183260515879-dg606rgl9qptsbplrcnb46um4jeqj77a.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { VisaPlan, Application, Review, SiteSettings, ProcessStep, EmailTemplate, EmailDraft, EmailRecord, AdminAccount } from '../types';
+import { VisaPlan, Application, Review, SiteSettings, ProcessStep, EmailTemplate, EmailDraft, AdminAccount } from '../types';
 import { db, auth } from '../lib/firebase';
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, getDoc, query, where } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
 interface AppContextType {
@@ -12,7 +12,6 @@ interface AppContextType {
   processSteps: ProcessStep[];
   emailTemplates: EmailTemplate[];
   emailDrafts: EmailDraft[];
-  emailHistory: EmailRecord[];
   admins: AdminAccount[];
   isDataLoaded: boolean;
   authLoading: boolean;
@@ -31,8 +30,6 @@ interface AppContextType {
   updateEmailDraft: (draft: EmailDraft) => Promise<void>;
   addEmailDraft: (draft: EmailDraft) => Promise<void>;
   deleteEmailDraft: (id: string) => Promise<void>;
-  addEmailRecord: (record: EmailRecord) => Promise<void>;
-  deleteEmailRecord: (id: string) => Promise<void>;
   updateVisaPlan: (plan: VisaPlan) => Promise<void>;
   addVisaPlan: (plan: VisaPlan) => Promise<void>;
   deleteVisaPlan: (id: string) => Promise<void>;
@@ -97,7 +94,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [processSteps, setProcessSteps] = useState<ProcessStep[]>(DEFAULT_STEPS);
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(DEFAULT_TEMPLATES);
   const [emailDrafts, setEmailDrafts] = useState<EmailDraft[]>([]);
-  const [emailHistory, setEmailHistory] = useState<EmailRecord[]>([]);
   const [admins, setAdmins] = useState<AdminAccount[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
@@ -198,16 +194,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    const unsubscribeReviews = onSnapshot(
-      collection(db, 'reviews'),
-      (snapshot) => {
-        setReviews(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Review)));
-      },
-      (err) => {
-        console.warn('Firestore reviews listener notice:', err.message);
-      }
-    );
-
     const unsubscribeSettings = onSnapshot(
       doc(db, 'siteSettings', 'global'),
       (docSnap) => {
@@ -249,11 +235,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       clearTimeout(safetyTimer);
       unsubscribePlans();
-      unsubscribeReviews();
       unsubscribeSettings();
       unsubscribeSteps();
     };
   }, []);
+
+  // 3. Reviews listener: query only 'approved' for public, load all when admin signed in
+  useEffect(() => {
+    const reviewsRef = collection(db, 'reviews');
+    const reviewsQuery = adminLoggedIn
+      ? reviewsRef
+      : query(reviewsRef, where('status', '==', 'approved'));
+
+    const unsubscribeReviews = onSnapshot(
+      reviewsQuery,
+      (snapshot) => {
+        setReviews(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Review)));
+      },
+      (err) => {
+        console.warn('Firestore reviews listener notice:', err.message);
+      }
+    );
+
+    return () => {
+      unsubscribeReviews();
+    };
+  }, [adminLoggedIn]);
 
   // 3. Admin-Only Firestore Listeners (applications, admins, emailTemplates, emailDrafts, emailHistory)
   // Strictly subscribe ONLY when an admin is signed in!
@@ -263,7 +270,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setAdmins([]);
       setEmailTemplates(DEFAULT_TEMPLATES);
       setEmailDrafts([]);
-      setEmailHistory([]);
       return;
     }
 
@@ -312,24 +318,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    const unsubHistory = onSnapshot(
-      collection(db, 'emailHistory'),
-      (snapshot) => {
-        const records = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailRecord));
-        records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setEmailHistory(records);
-      },
-      (err) => {
-        console.warn('Firestore emailHistory listener notice:', err.message);
-      }
-    );
-
     return () => {
       unsubApps();
       unsubAdmins();
       unsubTemplates();
       unsubDrafts();
-      unsubHistory();
     };
   }, [adminLoggedIn]);
 
@@ -367,8 +360,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateSiteSettings = async (settings: SiteSettings) => {
     const cleanSettings = { ...settings };
     delete (cleanSettings as any).admins;
-    delete (cleanSettings as any).admin1Password;
-    delete (cleanSettings as any).forgotPasswordCode;
     await setDoc(doc(db, 'siteSettings', 'global'), cleanSettings);
     setSiteSettings(cleanSettings);
   };
@@ -389,8 +380,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateEmailDraft = async (d: EmailDraft) => await updateDoc(doc(db, 'emailDrafts', d.id), { ...d });
   const addEmailDraft = async (d: EmailDraft) => await setDoc(doc(db, 'emailDrafts', d.id), { ...d });
   const deleteEmailDraft = async (id: string) => await deleteDoc(doc(db, 'emailDrafts', id));
-  const addEmailRecord = async (r: EmailRecord) => await setDoc(doc(db, 'emailHistory', r.id), { ...r });
-  const deleteEmailRecord = async (id: string) => await deleteDoc(doc(db, 'emailHistory', id));
 
   // Admin management
   const addAdmin = async (data: { email: string; name?: string; role: string }) => {
@@ -410,7 +399,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateAdmin = async (uid: string, data: Partial<AdminAccount>) => {
-    await updateDoc(doc(db, 'admins', uid), data);
+    const idToken = await auth.currentUser?.getIdToken();
+    const res = await fetch('/api/admin/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify({ uid, ...data })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update admin');
+    }
   };
 
   const deleteAdmin = async (uid: string) => {
@@ -432,16 +433,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const contextValue = React.useMemo(() => {
     if (!siteSettings) return undefined;
     return {
-      visaPlans, applications, reviews, siteSettings, processSteps, emailTemplates, emailDrafts, emailHistory, admins,
+      visaPlans, applications, reviews, siteSettings, processSteps, emailTemplates, emailDrafts, admins,
       isDataLoaded, authLoading, adminLoggedIn, adminUser, adminEmail, adminUid, adminRole, adminUsername: adminEmail,
       setAdminLoggedIn: setAdminLoggedInStatus, setAdminUsername, logout,
       updateVisaPlan, addVisaPlan, deleteVisaPlan,
       updateApplication, addApplication, deleteApplication, updateReview, addReview, deleteReview, updateSiteSettings,
       updateProcessStep, addProcessStep, deleteProcessStep, updateEmailTemplate, addEmailTemplate, deleteEmailTemplate,
-      updateEmailDraft, addEmailDraft, deleteEmailDraft, addEmailRecord, deleteEmailRecord,
+      updateEmailDraft, addEmailDraft, deleteEmailDraft,
       addAdmin, updateAdmin, deleteAdmin
     };
-  }, [visaPlans, applications, reviews, siteSettings, processSteps, emailTemplates, emailDrafts, emailHistory, admins, isDataLoaded, authLoading, adminLoggedIn, adminUser, adminEmail, adminUid, adminRole]);
+  }, [visaPlans, applications, reviews, siteSettings, processSteps, emailTemplates, emailDrafts, admins, isDataLoaded, authLoading, adminLoggedIn, adminUser, adminEmail, adminUid, adminRole]);
 
   if (!siteSettings || !contextValue) {
     return (
