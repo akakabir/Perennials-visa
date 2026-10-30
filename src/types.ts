@@ -19,7 +19,7 @@ export type Price = {
   note: string;
 };
 
-export type ApplicationStatus = 'Submitted' | 'Under Review' | 'Assessment' | 'Payment Required' | 'Payment Confirmed' | 'Documents Requested' | 'Processing' | 'Approved' | 'Rejected';
+export type ApplicationStatus = 'New' | 'Submitted' | 'Under Review' | 'Assessment' | 'Documents Requested' | 'Processing' | 'Approved' | 'Rejected';
 
 export type Application = {
   id: string;
@@ -49,11 +49,12 @@ export type Review = {
 };
 
 export type AdminAccount = {
-  name: string;
+  uid: string;
+  name?: string;
   email: string;
-  passwordHash: string;
   role: string;
   status: 'active' | 'inactive';
+  createdAt?: string;
 };
 
 export type ProcessStep = {
@@ -101,8 +102,5 @@ export type SiteSettings = {
   heroSubheading: string;
   aboutBlurb: string;
   footerText: string;
-  admins: AdminAccount[];
-  forgotPasswordCode?: string;
   defaultFromEmail?: string;
-  admin1Password?: string;
 };

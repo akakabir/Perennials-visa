@@ -106,7 +106,7 @@ Please let me know the document checklist and how we can proceed with this appli
         phone: applicantPhone.trim() || 'WhatsApp Contact',
         planId: plan.id,
         submittedDate: new Date().toISOString(),
-        status: 'Submitted',
+        status: 'New',
         adminNote: `WhatsApp Inquiry for ${plan.name} (${selectedCurrency}). Destination: ${plan.destinationCountry}. Client Note: ${applicantNotes.trim() || 'None'}`
       });
     } catch (err) {
@@ -291,8 +291,8 @@ Please let me know the document checklist and how we can proceed with this appli
                           : 'text-[#7A7369] hover:text-[#3E3A35]'
                       }`}
                     >
-                      <CreditCard className="w-4 h-4" />
-                      Online Card Checkout
+                      <FileText className="w-4 h-4" />
+                      Submit Application Online
                     </button>
                   </div>
 
@@ -447,8 +447,8 @@ Please let me know the document checklist and how we can proceed with this appli
                           phone: applicantPhone.trim() || 'Not provided',
                           planId: checkoutPlan.id,
                           submittedDate: new Date().toISOString(),
-                          status: 'Submitted',
-                          adminNote: `Online Card Application for ${checkoutPlan.name} (${selectedCurrency}). Notes: ${applicantNotes.trim() || 'None'}`
+                          status: 'New',
+                          adminNote: `Online Application for ${checkoutPlan.name} (${selectedCurrency}). Notes: ${applicantNotes.trim() || 'None'}`
                         });
                         setSubmittedMode('card');
                         setSubmittedRef(refId);
@@ -459,12 +459,12 @@ Please let me know the document checklist and how we can proceed with this appli
                         setIsSubmittingApp(false);
                       }
                     }} className="space-y-4">
-                      <div className="p-4 bg-[#F0EEE9] rounded-xl border border-[#E6DFD5] text-xs text-[#7A7369] text-center">
-                        Secured with 256-bit encryption. Payment processing provided via Stripe.
+                      <div className="p-3.5 bg-[#F0EEE9] rounded-xl border border-[#E6DFD5] text-xs text-[#7A7369] text-center leading-relaxed">
+                        No payment is required upfront. Consulting and processing arrangements are coordinated directly with your dedicated visa specialist.
                       </div>
                       <Button type="submit" disabled={isSubmittingApp} className="w-full h-12 flex items-center justify-center gap-2">
-                        <CreditCard className="w-4 h-4" />
-                        {isSubmittingApp ? 'Submitting Application...' : 'Pay and Submit Application Online'}
+                        <Send className="w-4 h-4" />
+                        {isSubmittingApp ? 'Submitting Application...' : 'Submit Application Online'}
                       </Button>
                     </form>
                   )}

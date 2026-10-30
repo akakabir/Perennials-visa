@@ -1,1 +1,0 @@
-sed -i 's/export interface SpecularButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {/export type SpecularButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> \& {/g' src/components/SpecularButton.tsx

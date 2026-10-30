@@ -25,7 +25,7 @@ export default function ApplicationsManager() {
     (a.phone && a.phone.includes(search))
   );
 
-  const statuses: ApplicationStatus[] = ['Submitted', 'Under Review', 'Assessment', 'Payment Required', 'Payment Confirmed', 'Documents Requested', 'Processing', 'Approved', 'Rejected'];
+  const statuses: ApplicationStatus[] = ['New', 'Submitted', 'Under Review', 'Assessment', 'Documents Requested', 'Processing', 'Approved', 'Rejected'];
 
   const handleStatusChange = (appId: string, newStatus: ApplicationStatus) => {
     const app = applications.find(a => a.id === appId);
@@ -56,8 +56,8 @@ export default function ApplicationsManager() {
     setDeleteTarget(null);
   };
 
-  const copyPaymentLink = (referenceId: string) => {
-    const link = `${window.location.origin}/pay?ref=${referenceId}`;
+  const copyStatusLink = (referenceId: string) => {
+    const link = `${window.location.origin}/status?ref=${referenceId}`;
     navigator.clipboard.writeText(link);
     setCopiedLink(referenceId);
     setTimeout(() => setCopiedLink(null), 2000);
@@ -148,7 +148,7 @@ export default function ApplicationsManager() {
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end items-center gap-1">
-                        <button onClick={() => copyPaymentLink(app.referenceId)} className="p-2 text-[#7A7369] hover:text-[#3E3A35] hover:bg-[#F0EEE9] rounded-lg transition-colors" title="Copy Status/Payment Link">
+                        <button onClick={() => copyStatusLink(app.referenceId)} className="p-2 text-[#7A7369] hover:text-[#3E3A35] hover:bg-[#F0EEE9] rounded-lg transition-colors" title="Copy Application Status Link">
                           {copiedLink === app.referenceId ? <CheckCircle className="w-4 h-4 text-green-500"/> : <LinkIcon className="w-4 h-4"/>}
                         </button>
                         <button onClick={() => handleSendEmail(app.id)} className="p-2 text-[#7A7369] hover:text-[#3E3A35] hover:bg-[#F0EEE9] rounded-lg transition-colors" title="Send Email">

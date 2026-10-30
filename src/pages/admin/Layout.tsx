@@ -6,15 +6,23 @@ import { cn } from '../../lib/utils';
 
 // [UI COMPONENT] AdminLayout - Renders the AdminLayout view
 export default function AdminLayout() {
-  const { adminLoggedIn, setAdminLoggedIn, applications } = useAppContext();
+  const { adminLoggedIn, authLoading, logout, applications } = useAppContext();
   const location = useLocation();
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#E2B87C] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!adminLoggedIn) {
     return <Navigate to="/admin/login" replace />;
   }
 
   const handleLogout = async () => {
-    setAdminLoggedIn(false);
+    await logout();
   };
 
   const archivedCount = applications.filter(a => a.archived).length;

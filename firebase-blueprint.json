@@ -1,120 +1,128 @@
 {
-  "schema": {
-    "visaPlans": {
-      "type": "collection",
-      "description": "Visa plans available for users",
-      "schema": {
-        "id": "string",
-        "name": "string",
-        "destinationCountry": "string",
-        "flag": "string",
-        "description": "string",
-        "requirements": "array",
-        "processingTime": "string",
-        "featured": "boolean",
-        "status": "string",
-        "prices": "array"
+  "entities": {
+    "VisaPlan": {
+      "title": "VisaPlan",
+      "description": "Available visa destination packages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "destinationCountry": { "type": "string" },
+        "flag": { "type": "string" },
+        "description": { "type": "string" },
+        "requirements": { "type": "array" },
+        "processingTime": { "type": "string" },
+        "featured": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["active", "archived"] },
+        "prices": { "type": "array" }
+      },
+      "required": ["id", "name", "description", "status"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "Applicant visa submission record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "referenceId": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 64 },
+        "planId": { "type": "string", "maxLength": 64 },
+        "submittedDate": { "type": "string", "maxLength": 64 },
+        "status": {
+          "type": "string",
+          "enum": ["New", "Submitted", "Under Review", "Assessment", "Documents Requested", "Processing", "Approved", "Rejected"]
+        },
+        "adminNote": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["id", "referenceId", "name", "email", "phone", "planId", "submittedDate", "status"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "User testimonial and rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "maxLength": 2000 },
+        "country": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "date": { "type": "string" }
+      },
+      "required": ["name", "rating", "comment", "status", "date"]
+    },
+    "AdminAccount": {
+      "title": "AdminAccount",
+      "description": "Administrator account document keyed by Firebase Auth UID",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "superadmin", "manager"] },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email", "role", "status"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Public website branding and contact details",
+      "type": "object",
+      "properties": {
+        "siteName": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "instagram": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "heroHeadline": { "type": "string" },
+        "heroSubheading": { "type": "string" },
+        "aboutBlurb": { "type": "string" },
+        "footerText": { "type": "string" }
       }
     },
-    "applications": {
-      "type": "collection",
-      "description": "User visa applications",
-      "schema": {
-        "id": "string",
-        "referenceId": "string",
-        "name": "string",
-        "email": "string",
-        "phone": "string",
-        "planId": "string",
-        "submittedDate": "string",
-        "status": "string",
-        "adminNote": "string"
-      }
-    },
-    "reviews": {
-      "type": "collection",
-      "description": "User reviews",
-      "schema": {
-        "id": "string",
-        "name": "string",
-        "rating": "number",
-        "comment": "string",
-        "country": "string",
-        "status": "string",
-        "date": "string"
-      }
-    },
-    "processSteps": {
-      "type": "collection",
-      "description": "Process steps for the how it works section",
-      "schema": {
-        "id": "string",
-        "title": "string",
-        "description": "string",
-        "time": "string",
-        "order": "number"
-      }
-    },
-    "siteSettings": {
-      "type": "collection",
-      "description": "Global site settings",
-      "schema": {
-        "id": "string",
-        "phone": "string",
-        "whatsapp": "string",
-        "instagram": "string",
-        "email": "string",
-        "address": "string",
-        "heroHeadline": "string",
-        "heroSubheading": "string",
-        "aboutBlurb": "string",
-        "footerText": "string",
-        "companyName": "string",
-        "logoUrl": "string"
-      }
-    },
-    "admins": {
-      "type": "collection",
-      "description": "Administrator accounts and credentials",
-      "schema": {
-        "id": "string",
-        "name": "string",
-        "email": "string",
-        "passwordHash": "string",
-        "role": "string",
-        "status": "string"
-      }
+    "ProcessStep": {
+      "title": "ProcessStep",
+      "description": "How it works step",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "time": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "title", "description", "order"]
     }
   },
-  "securityRules": {
-    "roles": {
-      "admin": "request.auth != null"
+  "firestore": {
+    "/visaPlans/{planId}": {
+      "schema": "VisaPlan",
+      "description": "Public visa plan listings"
     },
-    "rules": {
-      "visaPlans": {
-        "read": "true",
-        "write": "isAdmin()"
-      },
-      "applications": {
-        "read": "true",
-        "write": "true"
-      },
-      "reviews": {
-        "read": "true",
-        "write": "true"
-      },
-      "processSteps": {
-        "read": "true",
-        "write": "isAdmin()"
-      },
-      "siteSettings": {
-        "read": "true",
-        "write": "isAdmin()"
-      },
-      "admins": {
-        "read": "true",
-        "write": "isAdmin()"
-      }
+    "/applications/{appId}": {
+      "schema": "Application",
+      "description": "Visa applications with public creation and admin-only access"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Customer testimonials with public submission and approval moderation"
+    },
+    "/admins/{adminUid}": {
+      "schema": "AdminAccount",
+      "description": "Admin authorization records mapped to Auth UID"
+    },
+    "/siteSettings/global": {
+      "schema": "SiteSettings",
+      "description": "Public website configuration"
+    },
+    "/processSteps/{stepId}": {
+      "schema": "ProcessStep",
+      "description": "Application workflow stages"
     }
   }
 }

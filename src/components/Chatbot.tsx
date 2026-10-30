@@ -46,28 +46,31 @@ ${plansInfo || 'None currently.'}
   }, [messages, isOpen]);
 
   const sendMessageToAI = async (message: string, history: Message[]): Promise<string> => {
-    const fullHistory = [
-      { role: 'system', content: systemPrompt },
-      ...history.map(m => ({ role: m.role, content: m.content }))
-    ];
+    // Client only sends user and assistant conversation turns
+    const conversation = history
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({ role: m.role, content: m.content }));
 
-    const response = await /* [API CALL] /api/chat */ fetch('/api/chat', {
+    const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        messages: fullHistory
+        messages: conversation
       })
     });
 
+    if (response.status === 429) {
+      throw new Error('429');
+    }
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to connect to the AI service.');
+      throw new Error('500');
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    return data.choices?.[0]?.message?.content || "Thank you for reaching out. How else can I assist your visa journey?";
   };
 
   const handleSend = async (e: React.FormEvent) => {
@@ -85,7 +88,11 @@ ${plansInfo || 'None currently.'}
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: replyContent }]);
     } catch (error: any) {
       console.error("Chat error:", error);
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: error.message || "I'm sorry, I encountered an error. Please try again." }]);
+      let fallback = "Our AI assistance is momentarily unavailable. You can reach our consultants directly on WhatsApp for immediate help.";
+      if (error.message === '429') {
+        fallback = "I am receiving a high volume of inquiries right now. Please wait a few moments before sending another message, or contact our team directly on WhatsApp.";
+      }
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: fallback }]);
     } finally {
       setIsLoading(false);
     }

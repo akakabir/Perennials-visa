@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../store/AppContext';
 import { Button } from '../../components/Button';
-import { Mail, Save, Plus, Trash2, Edit2, Check, Search, Eye, Copy, FileText, X } from 'lucide-react';
+import { Mail, Save, Plus, Trash2, Edit2, Check, Search, Eye, Copy, FileText, X, Send, Loader2, History, AlertCircle } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { EmailTemplate, EmailDraft, Application } from '../../types';
+import { auth } from '../../lib/firebase';
+import { cn } from '../../lib/utils';
 
 // [ADMIN PAGE] Email Center for drafting and editing client communications and templates
 // [UI COMPONENT] EmailCenter - Renders the EmailCenter view
@@ -12,7 +14,9 @@ export default function EmailCenter() {
     applications, 
     emailTemplates, 
     emailDrafts, 
+    emailHistory,
     siteSettings, 
+    admins,
     addEmailTemplate, 
     updateEmailTemplate, 
     deleteEmailTemplate, 
@@ -25,7 +29,8 @@ export default function EmailCenter() {
   
   const location = useLocation();
   const state = location.state as { selectedApplicant?: string, recipientType?: string } | null;
-  const [activeTab, setActiveTab] = useState<'editor' | 'drafts' | 'templates'>('editor');
+  const [activeTab, setActiveTab] = useState<'editor' | 'drafts' | 'templates' | 'history'>('editor');
+  const [sendingEmail, setSendingEmail] = useState(false);
   
   // Active Draft Editing State
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
@@ -57,7 +62,7 @@ export default function EmailCenter() {
     }
   }, [state]);
 
-  const adminEmails = (siteSettings.admins || []).map(a => a.email).filter(Boolean);
+  const adminEmails = (admins || []).map(a => a.email).filter(Boolean);
 
   const handleTemplateSelect = (id: string) => {
     setSelectedTemplateId(id);
@@ -165,6 +170,72 @@ export default function EmailCenter() {
     setCopiedId(idTag);
     showNotice('Copied subject and body to clipboard!');
     setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  const handleSendEmail = async () => {
+    const toList = getRecipientEmails();
+    if (toList.length === 0) {
+      showNotice('Please select or specify at least one recipient email address.');
+      return;
+    }
+    if (!resolvedSubject.trim() || !resolvedBody.trim()) {
+      showNotice('Please provide both a subject line and email body.');
+      return;
+    }
+
+    setSendingEmail(true);
+    let successCount = 0;
+    let failCount = 0;
+    let lastError = '';
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error('You must be signed in as an administrator.');
+
+      const templateObj = emailTemplates.find(t => t.id === selectedTemplateId);
+      const htmlBody = `<div style="font-family: sans-serif; font-size: 15px; line-height: 1.6; color: #3E3A35; white-space: pre-wrap;">${resolvedBody}</div>`;
+
+      for (const recipient of toList) {
+        try {
+          const res = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              to: recipient,
+              subject: resolvedSubject,
+              html: htmlBody,
+              templateName: templateObj?.name || 'Custom Email'
+            })
+          });
+
+          if (res.ok) {
+            successCount++;
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            failCount++;
+            lastError = errData.error || 'Provider rejected email.';
+          }
+        } catch (postErr: any) {
+          failCount++;
+          lastError = postErr.message || 'Network error.';
+        }
+      }
+
+      if (failCount === 0) {
+        showNotice(`✓ Email successfully sent to ${successCount} recipient(s)!`);
+      } else if (successCount > 0) {
+        showNotice(`Sent to ${successCount} recipient(s), failed for ${failCount}. ${lastError}`);
+      } else {
+        showNotice(`Failed to send email: ${lastError}`);
+      }
+    } catch (err: any) {
+      showNotice(err.message || 'Failed to dispatch email.');
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const handleLoadDraft = (draft: EmailDraft) => {
@@ -297,6 +368,17 @@ export default function EmailCenter() {
           <Mail className="w-4 h-4" />
           <span>Email Templates</span>
           <span className="text-xs bg-[#E6DFD5] text-[#7A7369] px-2 py-0.5 rounded-full font-sans">{emailTemplates.length}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'history' ? 'border-[#E2B87C] text-[#3E3A35] font-semibold' : 'border-transparent text-[#7A7369] hover:text-[#3E3A35]'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          <span>Dispatched History</span>
+          <span className="text-xs bg-[#E6DFD5] text-[#7A7369] px-2 py-0.5 rounded-full font-sans">{emailHistory.length}</span>
         </button>
       </div>
 
@@ -459,7 +541,16 @@ export default function EmailCenter() {
 
               {/* Action Buttons for Drafting */}
               <div className="flex flex-wrap gap-3 pt-2">
-                <Button onClick={handleSaveDraft} className="flex-1 flex justify-center items-center gap-2">
+                <Button 
+                  onClick={handleSendEmail} 
+                  disabled={sendingEmail} 
+                  className="flex-1 flex justify-center items-center gap-2"
+                >
+                  {sendingEmail ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  <span>{sendingEmail ? 'Dispatching Email...' : 'Send Email via Resend'}</span>
+                </Button>
+
+                <Button variant="outline" onClick={handleSaveDraft} className="flex justify-center items-center gap-2">
                   <Save className="w-4 h-4" />
                   <span>{editingDraftId ? 'Update Draft' : 'Save Draft'}</span>
                 </Button>
@@ -467,7 +558,7 @@ export default function EmailCenter() {
                 {editingDraftId && (
                   <Button variant="outline" onClick={handleSaveAsNewDraft} className="flex justify-center items-center gap-2">
                     <Plus className="w-4 h-4" />
-                    <span>Save Copy as New</span>
+                    <span>Save Copy</span>
                   </Button>
                 )}
 
@@ -477,7 +568,7 @@ export default function EmailCenter() {
                   className="flex justify-center items-center gap-2"
                 >
                   {copiedId === 'editor' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedId === 'editor' ? 'Copied' : 'Copy Email'}</span>
+                  <span>{copiedId === 'editor' ? 'Copied' : 'Copy Text'}</span>
                 </Button>
               </div>
             </div>
@@ -695,6 +786,62 @@ export default function EmailCenter() {
                 </Button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dispatched History Tab */}
+      {activeTab === 'history' && (
+        <div className="bg-[#FCFBF8] border border-[#E6DFD5] rounded-2xl p-6 space-y-4">
+          <div className="flex justify-between items-center mb-2">
+            <div>
+              <h2 className="text-lg font-semibold text-[#3E3A35]">Dispatched Email Log</h2>
+              <p className="text-xs text-[#7A7369]">Real-time history of all customer correspondence dispatched via Resend.</p>
+            </div>
+            <span className="text-xs font-mono text-[#7A7369] bg-[#FAF8F4] px-2.5 py-1 rounded border border-[#E6DFD5]">
+              Total Logged: {emailHistory.length}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {emailHistory.length > 0 ? (
+              emailHistory.map(record => (
+                <div key={record.id} className="p-4 bg-white border border-[#E6DFD5] rounded-xl shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border",
+                        record.status === 'Sent'
+                          ? "bg-green-500/10 text-green-700 border-green-500/20"
+                          : "bg-red-500/10 text-red-600 border-red-500/20"
+                      )}>
+                        {record.status}
+                      </span>
+                      <p className="font-bold text-sm text-[#3E3A35]">{record.subject}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#7A7369]">
+                      <span>To: <strong className="text-[#3E3A35]">{record.recipient}</strong></span>
+                      {record.templateName && <span>Template: <em>{record.templateName}</em></span>}
+                      <span>Date: {new Date(record.date).toLocaleString()}</span>
+                    </div>
+                    {record.errorMsg && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>Error: {record.errorMsg}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-12 text-center bg-white border border-[#E6DFD5] rounded-xl space-y-2">
+                <Mail className="w-10 h-10 text-[#7A7369]/40 mx-auto mb-2" />
+                <h3 className="font-medium text-[#3E3A35] text-sm">No dispatched emails recorded yet</h3>
+                <p className="text-xs text-[#7A7369] max-w-sm mx-auto">
+                  When you send emails through the Draft Editor, delivery status and records will appear here.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

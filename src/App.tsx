@@ -1,4 +1,3 @@
-import { checkAndUpdateTemplates } from "./updateTemplates";
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useAppContext } from './store/AppContext';
@@ -13,10 +12,6 @@ import { LoadingSequence } from './components/LoadingSequence';
 // [UI COMPONENT] AppSEOUpdater - Renders the AppSEOUpdater view
 function AppSEOUpdater() {
   const { siteSettings } = useAppContext();
-  
-  React.useEffect(() => {
-    checkAndUpdateTemplates().catch(console.error);
-  }, []);
 
   React.useEffect(() => {
     if (siteSettings) {
@@ -60,7 +55,6 @@ const Home = lazy(() => import('./pages/Home'));
 const About = lazy(() => import('./pages/About'));
 const FAQs = lazy(() => import('./pages/FAQs'));
 const Status = lazy(() => import('./pages/Status'));
-const Payment = lazy(() => import('./pages/Payment'));
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
 const AdminLayout = lazy(() => import('./pages/admin/Layout'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -95,7 +89,6 @@ export default function App() {
             <Route path="/faqs" element={<><Navbar /><main className="min-h-screen pt-28"><FAQs /></main><Footer /></>} />
             <Route path="/faq" element={<Navigate to="/faqs" replace />} />
             <Route path="/status" element={<Status />} />
-            <Route path="/pay" element={<Payment />} />
 
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/adminanalytics" element={<Navigate to="/admin/analytics" replace />} />

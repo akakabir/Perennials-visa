@@ -1,92 +1,43 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { Resend } from 'resend';
 import dotenv from 'dotenv';
 dotenv.config();
+
+// Import single-source handlers from /api
+import chatHandler from './api/chat';
+import healthHandler from './api/health';
+import sendEmailHandler from './api/send-email';
+import applicationStatusHandler from './api/application-status';
+import recoveryGenerateHandler from './api/recovery-code/generate';
+import recoveryRedeemHandler from './api/recovery-code/redeem';
+import adminVerifyHandler from './api/admin/verify';
+import adminCreateHandler from './api/admin/create';
+import adminDeleteHandler from './api/admin/delete';
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-// [API ROUTE] Handle sending emails via Resend
-app.post('/api/send-email', async (req, res) => {
-  try {
-    const resendKey = process.env.RESEND_API_KEY;
-    if (!resendKey) {
-      return res.status(500).json({ error: 'RESEND_API_KEY is not configured.' });
-    }
-    const resend = new Resend(resendKey);
-    const { to, subject, html, from } = req.body;
-    const data = await resend.emails.send({
-      from: req.body.from || process.env.RESEND_FROM_EMAIL || 'Acme <onboarding@resend.dev>',
-      to,
-      subject,
-      html
-    });
-    if (data.error) {
-      return res.status(400).json({ error: data.error.message });
-    }
-    res.json({ success: true, data });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to send email.' });
-  }
-});
 
-// [API ROUTE] Health check endpoint for system status
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'operational',
-    services: {
-      server: 'operational',
-      ai_proxy: process.env.GROQ_API_KEY ? 'operational' : 'degraded'
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+// Express adapter for Vercel serverless handlers
+const adapt = (handler: (req: any, res: any) => any) => (req: express.Request, res: express.Response) => {
+  return handler(req, res);
+};
 
-// [API ROUTE] Chatbot AI proxy via Groq API
-app.post('/api/chat', async (req, res) => {
-  try {
-    const groqKey = process.env.GROQ_API_KEY;
-    if (!groqKey) {
-      return res.status(500).json({ error: 'GROQ_API_KEY is not configured on the server.' });
-    }
+// Mount API routes directly from /api handlers
+app.all('/api/chat', adapt(chatHandler));
+app.all('/api/health', adapt(healthHandler));
+app.all('/api/send-email', adapt(sendEmailHandler));
+app.all('/api/application-status', adapt(applicationStatusHandler));
+app.all('/api/recovery-code/generate', adapt(recoveryGenerateHandler));
+app.all('/api/recovery-code/redeem', adapt(recoveryRedeemHandler));
+app.all('/api/admin/verify', adapt(adminVerifyHandler));
+app.all('/api/admin/create', adapt(adminCreateHandler));
+app.all('/api/admin/delete', adapt(adminDeleteHandler));
 
-    const { messages } = req.body;
-
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: 'Invalid messages array.' });
-    }
-
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${groqKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
-        messages
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      return res.status(response.status).json({ error: `Groq API Error: ${errorData}` });
-    }
-
-    const data = await response.json();
-    return res.json(data);
-  } catch (error: any) {
-    console.error('Groq Proxy Error:', error);
-    res.status(500).json({ error: error.message || 'Failed to process request.' });
-  }
-});
-
-// [SERVER BOOTSTRAP] Start Express server and attach Vite middleware/SPA fallback
+// [SERVER BOOTSTRAP] Start Express server and attach Vite middleware / SPA fallback
 async function startServer() {
-
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },

@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { VisaPlan, Application, Review, SiteSettings, ProcessStep, EmailTemplate, EmailDraft, EmailRecord } from '../types';
+import { VisaPlan, Application, Review, SiteSettings, ProcessStep, EmailTemplate, EmailDraft, EmailRecord, AdminAccount } from '../types';
 import { db, auth } from '../lib/firebase';
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
 interface AppContextType {
   visaPlans: VisaPlan[];
@@ -13,7 +13,18 @@ interface AppContextType {
   emailTemplates: EmailTemplate[];
   emailDrafts: EmailDraft[];
   emailHistory: EmailRecord[];
+  admins: AdminAccount[];
   isDataLoaded: boolean;
+  authLoading: boolean;
+  adminLoggedIn: boolean;
+  adminUser: User | null;
+  adminEmail: string | null;
+  adminUid: string | null;
+  adminRole: string | null;
+  adminUsername?: string | null;
+  setAdminLoggedIn: (status: boolean) => void;
+  setAdminUsername: (username: string | null) => void;
+  logout: () => Promise<void>;
   updateEmailTemplate: (template: EmailTemplate) => Promise<void>;
   addEmailTemplate: (template: EmailTemplate) => Promise<void>;
   deleteEmailTemplate: (id: string) => Promise<void>;
@@ -22,8 +33,6 @@ interface AppContextType {
   deleteEmailDraft: (id: string) => Promise<void>;
   addEmailRecord: (record: EmailRecord) => Promise<void>;
   deleteEmailRecord: (id: string) => Promise<void>;
-  adminLoggedIn: boolean; adminEmail: string | null; adminUsername?: string | null; setAdminUsername: (username: string | null) => void;
-  setAdminLoggedIn: (status: boolean) => void;
   updateVisaPlan: (plan: VisaPlan) => Promise<void>;
   addVisaPlan: (plan: VisaPlan) => Promise<void>;
   deleteVisaPlan: (id: string) => Promise<void>;
@@ -37,6 +46,9 @@ interface AppContextType {
   updateProcessStep: (step: ProcessStep) => Promise<void>;
   addProcessStep: (step: ProcessStep) => Promise<void>;
   deleteProcessStep: (id: string) => Promise<void>;
+  addAdmin: (data: { email: string; name?: string; role: string }) => Promise<void>;
+  updateAdmin: (uid: string, data: Partial<AdminAccount>) => Promise<void>;
+  deleteAdmin: (uid: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -62,13 +74,12 @@ const DEFAULT_SETTINGS: SiteSettings = {
   heroSubheading: 'Expert visa consultancy for individuals and businesses worldwide.',
   aboutBlurb: 'Professional assistance for tourism and short-stay business visa applications worldwide.',
   footerText: '© 2026 Perennials Visa. All rights reserved.',
-  admins: [{ name: 'Admin', email: 'admin1', passwordHash: 'Perennial1@', role: 'admin', status: 'active' }],
-  forgotPasswordCode: 'didyouknowthatthiswebsitewasmadebyathirteenyearold'
+  defaultFromEmail: 'info@perennialsvisa.com'
 };
 
 const DEFAULT_TEMPLATES: EmailTemplate[] = [
   { id: 't1', name: 'Assessment - Not Recommended to Proceed', subject: 'Visa Assessment Update - {{referenceId}}', body: 'Hello {{applicantName}},\n\nThank you for allowing Perennials to review your visa profile.\n\nBased on the information currently available, we are unable to recommend proceeding with the visa application at this stage.\n\nThis assessment is based on the information provided and does not represent a decision by the relevant immigration authority.\n\nIf your circumstances change or additional supporting documents become available, we can review your profile again.\n\nRegards,\nPerennials\n\n{{companyEmail}}\n{{companyPhone}}' },
-  { id: 't2', name: 'Assessment - You Can Proceed', subject: 'Visa Assessment - Next Steps', body: 'Hello {{applicantName}},\n\nThank you for choosing Perennials.\n\nBased on the information currently available, your profile can proceed to the next stage of the visa application process.\n\nPlease note that this assessment does not guarantee visa approval. The final decision is made by the relevant immigration authority.\n\nTo continue with the process, the required service payment must be completed.\n\nOnce payment is confirmed, we can proceed with the next steps and required documentation.\n\nApplication Reference:\n{{referenceId}}\n\nDestination:\n{{destination}}\n\nRegards,\nPerennials\n\n{{companyEmail}}\n{{companyPhone}}' }
+  { id: 't2', name: 'Assessment - You Can Proceed', subject: 'Visa Assessment - Next Steps', body: 'Hello {{applicantName}},\n\nThank you for choosing Perennials.\n\nBased on the information currently available, your profile can proceed to the next stage of the visa application process.\n\nPlease note that this assessment does not guarantee visa approval. The final decision is made by the relevant immigration authority.\n\nTo continue with the process, our consultant will coordinate with you regarding the requirements and arrangements.\n\nOnce arranged, we will proceed with the next steps and required documentation.\n\nApplication Reference:\n{{referenceId}}\n\nDestination:\n{{destination}}\n\nRegards,\nPerennials\n\n{{companyEmail}}\n{{companyPhone}}' }
 ];
 
 const DEFAULT_STEPS: ProcessStep[] = [
@@ -87,22 +98,77 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(DEFAULT_TEMPLATES);
   const [emailDrafts, setEmailDrafts] = useState<EmailDraft[]>([]);
   const [emailHistory, setEmailHistory] = useState<EmailRecord[]>([]);
+  const [admins, setAdmins] = useState<AdminAccount[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [adminEmail, setAdminUsernameState] = useState<string | null>(() => sessionStorage.getItem('pv_adminEmail'));
-  const [adminLoggedIn, setAdminLoggedInState] = useState<boolean>(() => {
-    return sessionStorage.getItem('pv_adminSession') === 'true';
-  });
 
-  const setAdminUsername = (username: string | null) => { setAdminUsernameState(username); if(username) sessionStorage.setItem('pv_adminEmail', username); else sessionStorage.removeItem('pv_adminEmail'); };
-  const setAdminLoggedIn = (status: boolean) => {
-    setAdminLoggedInState(status);
-    if (status) {
-      sessionStorage.setItem('pv_adminSession', 'true');
-    } else {
-      sessionStorage.removeItem('pv_adminSession');
-    }
+  // Real Firebase Auth state
+  const [adminUser, setAdminUser] = useState<User | null>(null);
+  const [adminLoggedIn, setAdminLoggedIn] = useState<boolean>(false);
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [adminUid, setAdminUid] = useState<string | null>(null);
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+
+  const setAdminUsername = (username: string | null) => {
+    setAdminEmail(username);
   };
 
+  const setAdminLoggedInStatus = (status: boolean) => {
+    if (!status) {
+      signOut(auth).catch(console.error);
+    }
+    setAdminLoggedIn(status);
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+    setAdminUser(null);
+    setAdminLoggedIn(false);
+    setAdminEmail(null);
+    setAdminUid(null);
+    setAdminRole(null);
+  };
+
+  // 1. Firebase Auth listener
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const res = await fetch('/api/admin/verify', {
+            headers: {
+              'Authorization': `Bearer ${await user.getIdToken()}`
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.admin && data.admin.status !== 'inactive') {
+              setAdminUser(user);
+              setAdminLoggedIn(true);
+              setAdminEmail(user.email || data.admin.email || null);
+              setAdminUid(user.uid);
+              setAdminRole(data.admin.role || 'admin');
+              setAuthLoading(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn('Admin verification check:', err);
+        }
+        // If not in admins doc or status is inactive, sign out
+        await signOut(auth).catch(() => {});
+      }
+      setAdminUser(null);
+      setAdminLoggedIn(false);
+      setAdminEmail(null);
+      setAdminUid(null);
+      setAdminRole(null);
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  // 2. Public Firestore listeners (visaPlans, processSteps, siteSettings, reviews)
   useEffect(() => {
     let resolved = 0;
     const markResolved = () => {
@@ -132,16 +198,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    const unsubscribeApps = onSnapshot(
-      collection(db, 'applications'),
-      (snapshot) => {
-        setApplications(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Application)));
-      },
-      (err) => {
-        console.warn('Firestore applications listener notice:', err.message);
-      }
-    );
-
     const unsubscribeReviews = onSnapshot(
       collection(db, 'reviews'),
       (snapshot) => {
@@ -160,8 +216,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const data = docSnap.data() as unknown as SiteSettings;
           setSiteSettings(prev => ({
             ...prev,
-            ...data,
-            admins: (data.admins && data.admins.length > 0) ? data.admins : (prev.admins || DEFAULT_SETTINGS.admins)
+            ...data
           }));
         } else {
           setDoc(doc(db, 'siteSettings', 'global'), DEFAULT_SETTINGS).catch(() => {});
@@ -171,63 +226,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       (err) => {
         markResolved();
         console.warn('Firestore siteSettings listener notice:', err.message);
-      }
-    );
-
-    const unsubscribeAdmins = onSnapshot(
-      collection(db, 'admins'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const list = snapshot.docs.map(d => ({ ...d.data() } as any));
-          setSiteSettings(prev => ({
-            ...prev,
-            admins: list
-          }));
-        } else {
-          DEFAULT_SETTINGS.admins.forEach(admin => {
-            setDoc(doc(db, 'admins', admin.email.toLowerCase()), admin).catch(() => {});
-          });
-        }
-      },
-      (err) => {
-        console.warn('Firestore admins listener notice:', err.message);
-      }
-    );
-
-    const unsubscribeEmailTemplates = onSnapshot(
-      collection(db, 'emailTemplates'),
-      (snapshot) => {
-        if (snapshot.empty) {
-          DEFAULT_TEMPLATES.forEach(template => setDoc(doc(db, 'emailTemplates', template.id), template).catch(() => {}));
-          setEmailTemplates(DEFAULT_TEMPLATES);
-        } else {
-          setEmailTemplates(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailTemplate)));
-        }
-      },
-      (err) => {
-        console.warn('Firestore emailTemplates listener notice:', err.message);
-      }
-    );
-
-    const unsubscribeEmailDrafts = onSnapshot(
-      collection(db, 'emailDrafts'),
-      (snapshot) => {
-        setEmailDrafts(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailDraft)));
-      },
-      (err) => {
-        console.warn('Firestore emailDrafts listener notice:', err.message);
-      }
-    );
-
-    const unsubscribeEmailHistory = onSnapshot(
-      collection(db, 'emailHistory'),
-      (snapshot) => {
-        const records = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailRecord));
-        records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setEmailHistory(records);
-      },
-      (err) => {
-        console.warn('Firestore emailHistory listener notice:', err.message);
       }
     );
 
@@ -251,21 +249,93 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       clearTimeout(safetyTimer);
       unsubscribePlans();
-      unsubscribeApps();
       unsubscribeReviews();
       unsubscribeSettings();
-      unsubscribeAdmins();
       unsubscribeSteps();
-      unsubscribeEmailTemplates();
-      unsubscribeEmailDrafts();
-      unsubscribeEmailHistory();
     };
   }, []);
+
+  // 3. Admin-Only Firestore Listeners (applications, admins, emailTemplates, emailDrafts, emailHistory)
+  // Strictly subscribe ONLY when an admin is signed in!
+  useEffect(() => {
+    if (!adminLoggedIn) {
+      setApplications([]);
+      setAdmins([]);
+      setEmailTemplates(DEFAULT_TEMPLATES);
+      setEmailDrafts([]);
+      setEmailHistory([]);
+      return;
+    }
+
+    const unsubApps = onSnapshot(
+      collection(db, 'applications'),
+      (snapshot) => {
+        setApplications(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Application)));
+      },
+      (err) => {
+        console.warn('Firestore applications listener notice:', err.message);
+      }
+    );
+
+    const unsubAdmins = onSnapshot(
+      collection(db, 'admins'),
+      (snapshot) => {
+        setAdmins(snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as AdminAccount)));
+      },
+      (err) => {
+        console.warn('Firestore admins listener notice:', err.message);
+      }
+    );
+
+    const unsubTemplates = onSnapshot(
+      collection(db, 'emailTemplates'),
+      (snapshot) => {
+        if (snapshot.empty) {
+          DEFAULT_TEMPLATES.forEach(template => setDoc(doc(db, 'emailTemplates', template.id), template).catch(() => {}));
+          setEmailTemplates(DEFAULT_TEMPLATES);
+        } else {
+          setEmailTemplates(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailTemplate)));
+        }
+      },
+      (err) => {
+        console.warn('Firestore emailTemplates listener notice:', err.message);
+      }
+    );
+
+    const unsubDrafts = onSnapshot(
+      collection(db, 'emailDrafts'),
+      (snapshot) => {
+        setEmailDrafts(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailDraft)));
+      },
+      (err) => {
+        console.warn('Firestore emailDrafts listener notice:', err.message);
+      }
+    );
+
+    const unsubHistory = onSnapshot(
+      collection(db, 'emailHistory'),
+      (snapshot) => {
+        const records = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailRecord));
+        records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setEmailHistory(records);
+      },
+      (err) => {
+        console.warn('Firestore emailHistory listener notice:', err.message);
+      }
+    );
+
+    return () => {
+      unsubApps();
+      unsubAdmins();
+      unsubTemplates();
+      unsubDrafts();
+      unsubHistory();
+    };
+  }, [adminLoggedIn]);
 
   const updateVisaPlan = async (plan: VisaPlan) => {
     await updateDoc(doc(db, 'visaPlans', plan.id), { ...plan });
   };
-  // [DB ACTION] Create a new Visa Plan
   const addVisaPlan = async (plan: VisaPlan) => {
     await setDoc(doc(db, 'visaPlans', plan.id), { ...plan });
   };
@@ -293,43 +363,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     await deleteDoc(doc(db, 'reviews', id));
   };
 
-  // [DB ACTION] Update global website settings
+  // Update siteSettings/global (public fields only, no credentials or admins array)
   const updateSiteSettings = async (settings: SiteSettings) => {
-    await setDoc(doc(db, 'siteSettings', 'global'), { ...settings });
-
-    // Ensure all admin accounts and credentials are saved to the dedicated 'admins' collection in Firestore
-    if (settings.admins && Array.isArray(settings.admins)) {
-      const currentEmails = new Set(
-        settings.admins.map(a => (a.email || '').toLowerCase().trim()).filter(Boolean)
-      );
-
-      for (const admin of settings.admins) {
-        const emailKey = (admin.email || '').toLowerCase().trim();
-        if (emailKey) {
-          await setDoc(doc(db, 'admins', emailKey), {
-            name: admin.name || '',
-            email: emailKey,
-            passwordHash: admin.passwordHash || '',
-            role: admin.role || 'admin',
-            status: admin.status || 'active'
-          });
-        }
-      }
-
-      // Clean up any removed admin accounts from the collection (except never delete if empty safety)
-      if (currentEmails.size > 0) {
-        try {
-          const snap = await getDocs(collection(db, 'admins'));
-          for (const d of snap.docs) {
-            if (!currentEmails.has(d.id.toLowerCase())) {
-              await deleteDoc(doc(db, 'admins', d.id));
-            }
-          }
-        } catch (err) {
-          console.warn('Admins collection prune notice:', err);
-        }
-      }
-    }
+    const cleanSettings = { ...settings };
+    delete (cleanSettings as any).admins;
+    delete (cleanSettings as any).admin1Password;
+    delete (cleanSettings as any).forgotPasswordCode;
+    await setDoc(doc(db, 'siteSettings', 'global'), cleanSettings);
+    setSiteSettings(cleanSettings);
   };
 
   const updateProcessStep = async (step: ProcessStep) => {
@@ -351,15 +392,56 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const addEmailRecord = async (r: EmailRecord) => await setDoc(doc(db, 'emailHistory', r.id), { ...r });
   const deleteEmailRecord = async (id: string) => await deleteDoc(doc(db, 'emailHistory', id));
 
+  // Admin management
+  const addAdmin = async (data: { email: string; name?: string; role: string }) => {
+    const idToken = await auth.currentUser?.getIdToken();
+    const res = await fetch('/api/admin/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create admin');
+    }
+  };
+
+  const updateAdmin = async (uid: string, data: Partial<AdminAccount>) => {
+    await updateDoc(doc(db, 'admins', uid), data);
+  };
+
+  const deleteAdmin = async (uid: string) => {
+    const idToken = await auth.currentUser?.getIdToken();
+    const res = await fetch('/api/admin/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify({ uid })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete admin');
+    }
+  };
+
   const contextValue = React.useMemo(() => {
     if (!siteSettings) return undefined;
     return {
-      visaPlans, applications, reviews, siteSettings, processSteps, emailTemplates, emailDrafts, emailHistory, isDataLoaded, adminLoggedIn, adminEmail, adminUsername: adminEmail, setAdminLoggedIn, setAdminUsername,
+      visaPlans, applications, reviews, siteSettings, processSteps, emailTemplates, emailDrafts, emailHistory, admins,
+      isDataLoaded, authLoading, adminLoggedIn, adminUser, adminEmail, adminUid, adminRole, adminUsername: adminEmail,
+      setAdminLoggedIn: setAdminLoggedInStatus, setAdminUsername, logout,
       updateVisaPlan, addVisaPlan, deleteVisaPlan,
       updateApplication, addApplication, deleteApplication, updateReview, addReview, deleteReview, updateSiteSettings,
-      updateProcessStep, addProcessStep, deleteProcessStep, updateEmailTemplate, addEmailTemplate, deleteEmailTemplate, updateEmailDraft, addEmailDraft, deleteEmailDraft, addEmailRecord, deleteEmailRecord
+      updateProcessStep, addProcessStep, deleteProcessStep, updateEmailTemplate, addEmailTemplate, deleteEmailTemplate,
+      updateEmailDraft, addEmailDraft, deleteEmailDraft, addEmailRecord, deleteEmailRecord,
+      addAdmin, updateAdmin, deleteAdmin
     };
-  }, [visaPlans, applications, reviews, siteSettings, processSteps, adminLoggedIn, emailTemplates, emailDrafts, emailHistory, adminEmail, isDataLoaded]);
+  }, [visaPlans, applications, reviews, siteSettings, processSteps, emailTemplates, emailDrafts, emailHistory, admins, isDataLoaded, authLoading, adminLoggedIn, adminUser, adminEmail, adminUid, adminRole]);
 
   if (!siteSettings || !contextValue) {
     return (
@@ -383,4 +465,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
