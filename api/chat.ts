@@ -97,7 +97,7 @@ Provide accurate information about visa options, travel requirements, documentat
 Do NOT give definitive legal promises; state that visas are granted at the discretion of the respective immigration authorities.
 Never quote hardcoded fees; mention that consultation and service fees are discussed and arranged directly with a Perennials Visa specialist via WhatsApp.
 ${plansContext}
-Keep responses concise, clear, and under 150 words.`
+Reply in at most 2-3 short sentences (under 50 words). Plain text only: never use markdown, asterisks, bullet lists or headings. Answer only what was asked, then ask at most one short follow-up question.`
   };
 
   const fullMessages = [serverSystemPrompt, ...sanitizedMessages];
@@ -130,7 +130,7 @@ Keep responses concise, clear, and under 150 words.`
         body: JSON.stringify({
           model,
           messages: fullMessages,
-          max_tokens: 300,
+          max_tokens: 400,
           temperature: 0.7
         })
       });
@@ -155,6 +155,18 @@ Keep responses concise, clear, and under 150 words.`
     }
 
     const data = await response.json();
+    // Strip any markdown the model still emits (shown as plain text in the widget)
+    for (const choice of data?.choices || []) {
+      if (typeof choice?.message?.content === 'string') {
+        choice.message.content = choice.message.content
+          .replace(/\*\*(.+?)\*\*/gs, '$1')
+          .replace(/__(.+?)__/gs, '$1')
+          .replace(/^\s*#{1,6}\s+/gm, '')
+          .replace(/^\s*[*-]\s+/gm, '• ')
+          .replace(/[*`]/g, '')
+          .trim();
+      }
+    }
     return res.status(200).json(data);
   } catch (err: any) {
     console.error('Groq proxy error:', err);
