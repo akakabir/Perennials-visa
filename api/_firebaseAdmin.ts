@@ -6,27 +6,34 @@ const projectId = process.env.FIREBASE_PROJECT_ID || 'perennials-visa-288d6';
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 if (privateKey) {
-  privateKey = privateKey.trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+  privateKey = privateKey.trim();
+  // Whole service-account JSON pasted by mistake: pull the key out of it
+  if (privateKey.startsWith('{')) {
+    try { privateKey = JSON.parse(privateKey).private_key || privateKey; } catch { /* ignore */ }
+  }
+  privateKey = privateKey.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n').trim();
 }
+
+/** True only when real service-account credentials loaded. Firestore/Auth admin calls need this. */
+export let adminReady = false;
 
 let app: App;
 if (!getApps().length) {
   try {
-    if (clientEmail && privateKey) {
-      app = initializeApp({
-        credential: cert({ projectId, clientEmail, privateKey }),
-        projectId
-      });
-    } else {
-      app = initializeApp({ projectId });
-    }
+    if (!clientEmail || !privateKey) throw new Error('FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY not set');
+    app = initializeApp({
+      credential: cert({ projectId, clientEmail, privateKey }),
+      projectId
+    });
+    adminReady = true;
   } catch (err) {
-    // Bad FIREBASE_PRIVATE_KEY must not crash every API route (chat, health)
-    console.error('Firebase admin init with credentials failed, check FIREBASE_PRIVATE_KEY:', err);
+    // A bad key must never crash the API routes (chat, health)
+    console.error('Firebase admin credentials not usable, check FIREBASE_PRIVATE_KEY / FIREBASE_CLIENT_EMAIL:', (err as Error).message);
     app = initializeApp({ projectId }, 'fallback');
   }
 } else {
   app = getApp();
+  adminReady = true;
 }
 
 export const adminAuth: Auth = getAuth(app);
@@ -46,6 +53,8 @@ export async function verifyAdminRequest(req: any): Promise<VerifiedAdmin | null
   if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
     return null;
   }
+
+  if (!adminReady) return null;
 
   const token = authHeader.substring(7).trim();
   if (!token) return null;

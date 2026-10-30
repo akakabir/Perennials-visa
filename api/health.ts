@@ -1,4 +1,4 @@
-import { adminDb } from './_firebaseAdmin.js';
+import { adminDb, adminReady } from './_firebaseAdmin.js';
 
 let lastLoggedTime = 0;
 
@@ -11,7 +11,10 @@ export default async function handler(req: any, res: any) {
 
   // 1. Check Database (Firestore lightweight read)
   const startDb = Date.now();
-  try {
+  if (!adminReady) {
+    services.database = 'outage';
+    latencies.database = 0;
+  } else try {
     const snap = await adminDb.collection('siteSettings').doc('global').get();
     latencies.database = Date.now() - startDb;
     services.database = latencies.database > 2000 ? 'degraded' : 'operational';
@@ -64,7 +67,7 @@ export default async function handler(req: any, res: any) {
 
   // 4. Record status check at most once per 5 minutes to statusChecks collection
   const now = Date.now();
-  if (now - lastLoggedTime >= 300000) { // 5 minutes
+  if (adminReady && now - lastLoggedTime >= 300000) { // 5 minutes
     lastLoggedTime = now;
     adminDb.collection('statusChecks').add({
       timestamp,

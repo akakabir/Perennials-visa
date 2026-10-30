@@ -1,4 +1,4 @@
-import { adminDb } from './_firebaseAdmin.js';
+import { adminDb, adminReady } from './_firebaseAdmin.js';
 import { checkRateLimit, getClientIp } from './_rateLimit.js';
 
 export default async function handler(req: any, res: any) {
@@ -73,6 +73,7 @@ export default async function handler(req: any, res: any) {
   // 5. Read active visa plans to build authentic server-side system prompt
   let plansContext = '';
   try {
+    if (!adminReady) throw new Error('admin credentials unavailable');
     const plansSnap = await adminDb.collection('visaPlans')
       .where('status', '==', 'active')
       .get();
