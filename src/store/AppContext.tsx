@@ -150,6 +150,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         } catch (err) {
           console.warn('Admin verification check:', err);
         }
+
+        // Fallback: check direct Firestore admin document if user is already authenticated
+        try {
+          const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+          if (adminDoc.exists()) {
+            const docData = adminDoc.data();
+            if (docData && docData.status !== 'inactive') {
+              setAdminUser(user);
+              setAdminLoggedIn(true);
+              setAdminEmail(user.email || docData.email || null);
+              setAdminUid(user.uid);
+              setAdminRole(docData.role || 'admin');
+              setAuthLoading(false);
+              return;
+            }
+          }
+        } catch (directErr) {
+          console.warn('Direct Firestore admin check notice:', directErr);
+        }
+
         // If not in admins doc or status is inactive, sign out
         await signOut(auth).catch(() => {});
       }

@@ -6,12 +6,17 @@ const projectId = process.env.FIREBASE_PROJECT_ID || 'perennials-visa-288d6';
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 if (privateKey) {
-  privateKey = privateKey.trim();
+  let keyStr = privateKey.trim();
   // Whole service-account JSON pasted by mistake: pull the key out of it
-  if (privateKey.startsWith('{')) {
-    try { privateKey = JSON.parse(privateKey).private_key || privateKey; } catch { /* ignore */ }
+  if (keyStr.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(keyStr);
+      if (typeof parsed?.private_key === 'string') {
+        keyStr = parsed.private_key;
+      }
+    } catch { /* ignore */ }
   }
-  privateKey = privateKey.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n').trim();
+  privateKey = keyStr.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n').trim();
 }
 
 /** True only when real service-account credentials loaded. Firestore/Auth admin calls need this. */
@@ -61,13 +66,44 @@ export async function verifyAdminRequest(req: any): Promise<VerifiedAdmin | null
 
   try {
     const decoded = await adminAuth.verifyIdToken(token);
-    const adminDoc = await adminDb.collection('admins').doc(decoded.uid).get();
+    let adminDoc = await adminDb.collection('admins').doc(decoded.uid).get();
+    let data = adminDoc.exists ? adminDoc.data() : null;
 
-    if (!adminDoc.exists) {
-      return null;
+    // Check by email or phone if not found by direct UID (e.g. Google OAuth or Phone OTP sign-in)
+    if (!data && decoded.email) {
+      const byEmail = await adminDb.collection('admins')
+        .where('email', '==', decoded.email.toLowerCase().trim())
+        .limit(1)
+        .get();
+      if (!byEmail.empty) {
+        data = byEmail.docs[0].data();
+        if (data && data.status !== 'inactive') {
+          await adminDb.collection('admins').doc(decoded.uid).set({
+            ...data,
+            uid: decoded.uid,
+            linkedAt: new Date().toISOString()
+          }, { merge: true }).catch(() => {});
+        }
+      }
     }
 
-    const data = adminDoc.data();
+    if (!data && decoded.phone_number) {
+      const byPhone = await adminDb.collection('admins')
+        .where('phone', '==', decoded.phone_number)
+        .limit(1)
+        .get();
+      if (!byPhone.empty) {
+        data = byPhone.docs[0].data();
+        if (data && data.status !== 'inactive') {
+          await adminDb.collection('admins').doc(decoded.uid).set({
+            ...data,
+            uid: decoded.uid,
+            linkedAt: new Date().toISOString()
+          }, { merge: true }).catch(() => {});
+        }
+      }
+    }
+
     if (!data || data.status === 'inactive') {
       return null;
     }

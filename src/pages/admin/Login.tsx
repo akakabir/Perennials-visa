@@ -1,16 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Eye, EyeOff, Mail, KeyRound, ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  Lock, Eye, EyeOff, Mail, KeyRound, ArrowLeft, Loader2, CheckCircle,
+  AlertCircle, Sparkles
+} from 'lucide-react';
 import { Button } from '../../components/Button';
 import { useAppContext } from '../../store/AppContext';
 import { auth, db } from '../../lib/firebase';
-import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
+} from 'firebase/auth';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+
+function GoogleIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        fill="#34A853"
+      />
+      <path
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
 
 export default function Login() {
+  // Main Authentication mode: 'password' | 'email_link'
+  const [authMode, setAuthMode] = useState<'password' | 'email_link'>('password');
+
+  // Password Login State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Email Link State
+  const [emailLinkTarget, setEmailLinkTarget] = useState('');
+  const [emailLinkSent, setEmailLinkSent] = useState(false);
 
   // Forgot password mode: 'none' | 'email_reset' | 'recovery_code'
   const [forgotMode, setForgotMode] = useState<'none' | 'email_reset' | 'recovery_code'>('none');
@@ -34,6 +77,89 @@ export default function Login() {
     }
   }, [adminLoggedIn, authLoading, navigate]);
 
+  // Check for incoming passwordless email sign-in link
+  useEffect(() => {
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let emailForSignIn = window.localStorage.getItem('emailForSignIn');
+      if (!emailForSignIn) {
+        emailForSignIn = window.prompt('Please confirm your administrator email to complete sign in:');
+      }
+      if (emailForSignIn) {
+        setLoading(true);
+        signInWithEmailLink(auth, emailForSignIn, window.location.href)
+          .then(async (result) => {
+            window.localStorage.removeItem('emailForSignIn');
+            await verifyAndRedirectAdmin(result.user);
+          })
+          .catch((err) => {
+            console.error('Email link sign in error:', err);
+            setError(err.message || 'Failed to complete email link sign-in.');
+          })
+          .finally(() => setLoading(false));
+      }
+    }
+  }, []);
+
+  // Shared Admin Authorization Verification & Redirection
+  const verifyAndRedirectAdmin = async (user: any): Promise<boolean> => {
+    let isAdmin = false;
+
+    // 1. Check via backend API verify endpoint
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/admin/verify', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.admin && data.admin.status !== 'inactive') {
+          isAdmin = true;
+        }
+      }
+    } catch (err) {
+      console.warn('API verifyAdmin notice:', err);
+    }
+
+    // 2. Direct Firestore fallback by Auth UID
+    if (!isAdmin) {
+      try {
+        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+        if (adminDoc.exists() && adminDoc.data()?.status !== 'inactive') {
+          isAdmin = true;
+        }
+      } catch (err) {
+        console.warn('Direct Firestore UID check notice:', err);
+      }
+    }
+
+    // 3. Fallback: match by email in Firestore (for Google OAuth or email link sign-ins)
+    if (!isAdmin && user.email) {
+      try {
+        const emailQuery = query(
+          collection(db, 'admins'),
+          where('email', '==', user.email.toLowerCase().trim())
+        );
+        const snap = await getDocs(emailQuery);
+        if (!snap.empty && snap.docs[0].data()?.status !== 'inactive') {
+          isAdmin = true;
+        }
+      } catch (err) {
+        console.warn('Direct Firestore email check notice:', err);
+      }
+    }
+
+    if (!isAdmin) {
+      await signOut(auth);
+      setError(`Access denied: Account (${user.email || 'User'}) is not authorized as an active administrator.`);
+      setLoading(false);
+      return false;
+    }
+
+    navigate('/admin');
+    return true;
+  };
+
+  // 1. Password Sign-In Handler
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -61,40 +187,7 @@ export default function Login() {
       }
 
       const userCredential = await signInWithEmailAndPassword(auth, resolvedEmail, password);
-      const user = userCredential.user;
-
-      // Verify admin role in Firestore
-      let isAdmin = false;
-      try {
-        const idToken = await user.getIdToken();
-        const res = await fetch('/api/admin/verify', {
-          headers: { 'Authorization': `Bearer ${idToken}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.admin && data.admin.status !== 'inactive') {
-            isAdmin = true;
-          }
-        }
-      } catch {
-        // Fallback to direct client read
-      }
-
-      if (!isAdmin) {
-        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-        if (adminDoc.exists() && adminDoc.data().status !== 'inactive') {
-          isAdmin = true;
-        }
-      }
-
-      if (!isAdmin) {
-        await signOut(auth);
-        setError('Access denied: This account is not authorized as an active administrator.');
-        setLoading(false);
-        return;
-      }
-
-      navigate('/admin');
+      await verifyAndRedirectAdmin(userCredential.user);
     } catch (err: any) {
       console.error('Firebase Auth Login error:', err);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
@@ -111,6 +204,79 @@ export default function Login() {
     }
   };
 
+  // 2. Google OAuth Sign-In Handler
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, provider);
+      await verifyAndRedirectAdmin(result.user);
+    } catch (err: any) {
+      console.error('Google Sign-In error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Google sign-in popup was closed before completion.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Google sign-in popup was blocked by browser. Please allow popups.');
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        // Silently ignore duplicate request
+      } else {
+        setError(err.message || 'Failed to authenticate with Google.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. One-Time Email Sign-In Link (Passwordless)
+  const handleSendEmailLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailLinkTarget.trim()) {
+      setError('Please enter your administrator username or email.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      let resolvedEmail = emailLinkTarget.trim();
+      if (!resolvedEmail.includes('@')) {
+        try {
+          const res = await fetch('/api/admin/resolve-identifier', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: resolvedEmail })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.email) resolvedEmail = data.email;
+          }
+        } catch {}
+      }
+
+      const actionCodeSettings = {
+        url: window.location.origin + '/admin',
+        handleCodeInApp: true,
+      };
+
+      await sendSignInLinkToEmail(auth, resolvedEmail, actionCodeSettings);
+      window.localStorage.setItem('emailForSignIn', resolvedEmail);
+      setEmailLinkSent(true);
+      setSuccess(`A one-time sign-in link has been dispatched to ${resolvedEmail}. Check your inbox and click the link to enter the Admin Portal.`);
+    } catch (err: any) {
+      console.error('Email link send error:', err);
+      setError(err.message || 'Failed to send one-time email sign-in link.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. Password Reset & Recovery Code
   const handleEmailReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recoveryEmail.trim()) {
@@ -141,7 +307,6 @@ export default function Login() {
       setSuccess('If an administrator account exists for this username or email, a password reset link has been dispatched.');
     } catch (err: any) {
       console.error('Password reset error:', err);
-      // Generic response for security
       setSuccess('If an administrator account exists for this username or email, a password reset link has been dispatched.');
     } finally {
       setLoading(false);
@@ -197,12 +362,13 @@ export default function Login() {
       if (!res.ok) {
         setError(data.error || 'Failed to redeem recovery code.');
       } else {
-        setSuccess('Password updated successfully! Please sign in with your new password, then generate a fresh recovery code in Settings.');
+        setSuccess('Password updated successfully! Please sign in with your new password.');
         setRecoveryCode('');
         setNewPassword('');
         setConfirmPassword('');
         setTimeout(() => {
           setForgotMode('none');
+          setAuthMode('password');
           setEmail(recoveryEmail);
         }, 2000);
       }
@@ -218,87 +384,206 @@ export default function Login() {
       <div className="w-full max-w-md bg-[#FCFBF8] border border-[#E6DFD5] rounded-3xl p-8 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#E2B87C]/5 rounded-bl-[100px] pointer-events-none" />
 
-        <div className="flex flex-col items-center mb-8 relative z-10">
-          <div className="relative flex items-center justify-center w-20 h-20 mb-4 bg-[#0C0C34] rounded-full p-1.5 shadow-lg">
+        {/* Brand Header */}
+        <div className="flex flex-col items-center mb-6 relative z-10">
+          <div className="relative flex items-center justify-center w-20 h-20 mb-3 bg-[#0C0C34] rounded-full p-1.5 shadow-lg">
             <img src="/logo.png" alt="Perennials Visa Logo" className="w-full h-full object-contain drop-shadow-sm" />
           </div>
           <h1 className="text-xl font-bold text-[#3E3A35] tracking-widest uppercase">Admin Portal</h1>
-          <p className="text-xs text-[#7A7369] mt-1">Authorized personnel only</p>
+          <p className="text-xs text-[#7A7369] mt-0.5">Authorized personnel only</p>
         </div>
 
+        {/* Error / Success Notifications */}
         {error && (
-          <div className="mb-5 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-600 text-xs flex items-center gap-2">
+          <div className="mb-4 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-600 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="mb-5 p-3.5 bg-green-500/10 border border-green-500/20 rounded-xl text-green-700 text-xs flex items-center gap-2">
+          <div className="mb-4 p-3.5 bg-green-500/10 border border-green-500/20 rounded-xl text-green-700 text-xs flex items-center gap-2">
             <CheckCircle className="w-4 h-4 shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
-        {forgotMode === 'none' && (
-          <form onSubmit={handleLogin} className="space-y-4 relative z-10">
-            <div>
-              <label className="block text-xs font-medium text-[#7A7369] mb-1.5">Username or Email</label>
-              <input
-                type="text"
-                required
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Username or admin@perennialsvisa.com"
-                className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#E2B87C] transition-colors placeholder:text-[#7A7369]/40"
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="text-xs font-medium text-[#7A7369]">Password</label>
-                <button
-                  type="button"
-                  className="text-xs text-[#E2B87C] hover:underline"
-                  onClick={() => {
-                    setForgotMode('email_reset');
-                    setError('');
-                    setSuccess('');
-                    setRecoveryEmail(email);
-                  }}
-                >
-                  Forgot password?
-                </button>
-              </div>
-              <div className="relative">
+        {/* 1. Main Login Form: Password Auth Mode */}
+        {forgotMode === 'none' && authMode === 'password' && (
+          <div className="space-y-4 relative z-10">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#7A7369] mb-1.5">Username or Email</label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type="text"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#E2B87C] transition-colors pr-10"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Username or admin@perennialsvisa.com"
+                  className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#E2B87C] transition-colors placeholder:text-[#7A7369]/40"
                 />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7A7369] hover:text-[#3E3A35]"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-medium text-[#7A7369]">Password</label>
+                  <button
+                    type="button"
+                    className="text-xs text-[#E2B87C] hover:underline"
+                    onClick={() => {
+                      setForgotMode('email_reset');
+                      setError('');
+                      setSuccess('');
+                      setRecoveryEmail(email);
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#E2B87C] transition-colors pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7A7369] hover:text-[#3E3A35]"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <Button type="submit" disabled={loading} className="w-full mt-2 flex justify-center items-center gap-2">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+              </Button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#E6DFD5]" />
+              </div>
+              <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
+                <span className="bg-[#FCFBF8] px-2 text-[#7A7369]">Or continue with</span>
               </div>
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full mt-2 flex justify-center items-center gap-2">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-              <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
-            </Button>
-          </form>
+            {/* Additional Providers: Google OAuth & One-Time Email Link */}
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleGoogleSignIn}
+                className="w-full bg-white border border-[#D9CFBE] hover:border-[#E2B87C] hover:bg-[#FAF8F4] text-[#3E3A35] font-medium rounded-xl py-2.5 px-4 text-sm flex items-center justify-center gap-2.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <GoogleIcon className="w-4 h-4 shrink-0" />
+                <span>Sign in with Google</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  setAuthMode('email_link');
+                  setError('');
+                  setSuccess('');
+                  setEmailLinkTarget(email);
+                }}
+                className="w-full bg-[#FCFBF8] border border-[#D9CFBE] hover:border-[#E2B87C] hover:bg-[#FAF8F4] text-[#3E3A35] font-medium rounded-xl py-2.5 px-4 text-sm flex items-center justify-center gap-2.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <Mail className="w-4 h-4 text-[#E2B87C] shrink-0" />
+                <span>Sign in with One-Time Email Link</span>
+              </button>
+            </div>
+          </div>
         )}
 
+        {/* 2. One-Time Email Link Mode */}
+        {forgotMode === 'none' && authMode === 'email_link' && (
+          <div className="space-y-4 relative z-10">
+            <div className="border-b border-[#E6DFD5] pb-3 text-center">
+              <h2 className="text-sm font-semibold text-[#3E3A35] flex items-center justify-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-[#E2B87C]" />
+                <span>One-Time Email Sign-In Link</span>
+              </h2>
+              <p className="text-xs text-[#7A7369] mt-0.5">Passwordless sign-in sent directly to your inbox</p>
+            </div>
+
+            <form onSubmit={handleSendEmailLink} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#7A7369] mb-1.5">Admin Username or Email</label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={emailLinkTarget}
+                  onChange={(e) => setEmailLinkTarget(e.target.value)}
+                  placeholder="Username or admin@perennialsvisa.com"
+                  className="w-full bg-[#FCFBF8] border border-[#D9CFBE] text-[#3E3A35] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#E2B87C] transition-colors placeholder:text-[#7A7369]/40"
+                />
+                <p className="text-[11px] text-[#7A7369] mt-1">
+                  We will dispatch a secure one-time link. Clicking it logs you straight into the portal without requiring a password.
+                </p>
+              </div>
+
+              <Button type="submit" disabled={loading} className="w-full flex justify-center items-center gap-2">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                <span>{loading ? 'Sending Link...' : 'Send One-Time Sign-In Link'}</span>
+              </Button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#E6DFD5]" />
+              </div>
+              <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
+                <span className="bg-[#FCFBF8] px-2 text-[#7A7369]">Or</span>
+              </div>
+            </div>
+
+            {/* Alternative buttons */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleGoogleSignIn}
+                className="w-full bg-white border border-[#D9CFBE] hover:border-[#E2B87C] hover:bg-[#FAF8F4] text-[#3E3A35] font-medium rounded-xl py-2.5 px-4 text-sm flex items-center justify-center gap-2.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <GoogleIcon className="w-4 h-4 shrink-0" />
+                <span>Sign in with Google</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('password');
+                  setError('');
+                  setSuccess('');
+                }}
+                className="w-full py-2 text-xs text-[#7A7369] hover:text-[#3E3A35] flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Password Sign In</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 3. Password Reset Form */}
         {forgotMode === 'email_reset' && (
           <form onSubmit={handleEmailReset} className="space-y-4 relative z-10">
             <div className="text-center mb-2">
@@ -329,7 +614,7 @@ export default function Login() {
             <div className="pt-2 border-t border-[#E6DFD5] space-y-2 text-center">
               <button
                 type="button"
-                className="text-xs text-[#E2B87C] hover:underline flex items-center justify-center gap-1.5 w-full"
+                className="text-xs text-[#E2B87C] hover:underline flex items-center justify-center gap-1.5 w-full cursor-pointer"
                 onClick={() => {
                   setForgotMode('recovery_code');
                   setError('');
@@ -342,9 +627,10 @@ export default function Login() {
 
               <button
                 type="button"
-                className="text-xs text-[#7A7369] hover:text-[#3E3A35] flex items-center justify-center gap-1 w-full pt-1"
+                className="text-xs text-[#7A7369] hover:text-[#3E3A35] flex items-center justify-center gap-1 w-full pt-1 cursor-pointer"
                 onClick={() => {
                   setForgotMode('none');
+                  setAuthMode('password');
                   setError('');
                   setSuccess('');
                 }}
@@ -356,6 +642,7 @@ export default function Login() {
           </form>
         )}
 
+        {/* 4. Emergency Recovery Code Form */}
         {forgotMode === 'recovery_code' && (
           <form onSubmit={handleRedeemRecoveryCode} className="space-y-4 relative z-10">
             <div className="text-center mb-2">
@@ -431,7 +718,7 @@ export default function Login() {
             <div className="pt-2 border-t border-[#E6DFD5] space-y-2 text-center">
               <button
                 type="button"
-                className="text-xs text-[#E2B87C] hover:underline flex items-center justify-center gap-1 w-full"
+                className="text-xs text-[#E2B87C] hover:underline flex items-center justify-center gap-1 w-full cursor-pointer"
                 onClick={() => {
                   setForgotMode('email_reset');
                   setError('');
@@ -442,9 +729,10 @@ export default function Login() {
               </button>
               <button
                 type="button"
-                className="text-xs text-[#7A7369] hover:text-[#3E3A35] flex items-center justify-center gap-1 w-full pt-1"
+                className="text-xs text-[#7A7369] hover:text-[#3E3A35] flex items-center justify-center gap-1 w-full pt-1 cursor-pointer"
                 onClick={() => {
                   setForgotMode('none');
+                  setAuthMode('password');
                   setError('');
                   setSuccess('');
                 }}
