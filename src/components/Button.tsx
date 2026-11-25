@@ -27,29 +27,29 @@ export function Button({ variant = 'primary', size = 'md', className, children, 
   }
 
   // Perennial Visa colors derived directly from call button:
-  // Primary: call button gold #E2B87C with deep contrast text #0A0A31
+  // Primary: call button gold #E2B87C with deep contrast text #0A0A31 and shining polished silver ring
   // Secondary: soft warm background #F0EEE9 with dark text #3E3A35
   // Outline: transparent background with call button gold rim #E2B87C and gold text
   const getTint = () => {
-    if (isPrimary) return '#E2B87C'; // Gold from call button
+    if (isPrimary) return '#E2B87C'; // Exact gold from call button
     if (isSecondary) return '#F0EEE9';
     return 'transparent'; // outline
   };
 
   const getTextColor = () => {
-    if (isPrimary) return '#0A0A31';
+    if (isPrimary) return '#0A0A31'; // Deep contrast navy from call button
     if (isSecondary) return '#3E3A35';
     return '#E2B87C'; // outline gold #E2B87C
   };
   
   const getBaseColor = () => {
-    if (isPrimary) return '#E2B87C'; // Base gold #E2B87C
+    if (isPrimary) return '#D8DEE4'; // Bright polished metallic silver ring
     if (isSecondary) return '#D9CFBE';
     return '#E2B87C'; // Gold #E2B87C
   };
   
   const getLineColor = () => {
-    return '#D2D2D2'; // Silver from logo emblem
+    return '#FFFFFF'; // Pure brilliant shining silver-white specular highlight
   };
 
   const getTintOpacity = () => {
@@ -68,14 +68,16 @@ export function Button({ variant = 'primary', size = 'md', className, children, 
       textColor={getTextColor()}
       lineColor={getLineColor()}
       baseColor={getBaseColor()}
-      intensity={1.2}
-      idleIntensity={0.35}
-      shineSize={12}
-      shineFade={36}
-      thickness={1.4}
-      glow={1.2}
+      intensity={1.05}
+      idleIntensity={0.38}
+      shineSize={7}
+      shineFade={20}
+      thickness={1.5}
+      glow={0.85}
+      speed={0.12}
+      autoAnimate={true}
       followMouse={true}
-      proximity={250}
+      proximity={75}
       data-variant={variant}
       {...props}
     >

@@ -782,7 +782,7 @@ Please let me know the document checklist and how we can proceed with this appli
             <Button 
               variant="outline" 
               size="lg" 
-              className="border-[#E2B87C] text-[#E2B87C] hover:bg-[#E2B87C] hover:text-white"
+              className="border-[#E2B87C] text-[#E2B87C] hover:bg-[#E2B87C] hover:text-[#0A0A31]"
               onClick={() => {
                 setShowReviewModal(true);
                 setReviewSubmitted(false);

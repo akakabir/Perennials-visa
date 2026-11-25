@@ -30,7 +30,7 @@ export default function NotFound() {
           </h2>
 
           <Link to="/">
-            <Button className="bg-[#E2B87C] text-[#000000] hover:bg-[#c9a16a]">
+            <Button>
               Return Home
             </Button>
           </Link>

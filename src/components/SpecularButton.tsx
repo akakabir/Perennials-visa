@@ -13,7 +13,7 @@ void main() {
 `;
 
 const FRAGMENT = `#version 300 es
-precision mediump float;
+precision highp float;
 uniform vec2 uCenter;
 uniform vec2 uHalf;
 uniform float uRadius;
@@ -35,7 +35,7 @@ float roundedBox(vec2 p, vec2 b, float r) {
 
 float loopPosition(vec2 p, vec2 b, float r) {
   vec2 inner = b - r;
-  float arc = 1.5707963 * r;
+  float arc = 1.57079632679 * r;
   float quarter = inner.x + inner.y + arc;
   vec2 a = abs(p);
   vec2 q = a - inner;
@@ -47,27 +47,59 @@ float loopPosition(vec2 p, vec2 b, float r) {
   return s / max(4.0 * quarter, 0.0001);
 }
 
-float lobe(float position, float center) {
+float lobe(float position, float center, float wX, float wY) {
   float gap = abs(fract(position - center + 0.5) - 0.5);
-  return 1.0 - smoothstep(uWindow.x, uWindow.x + uWindow.y, gap);
+  return 1.0 - smoothstep(wX, wX + wY, gap);
 }
 
 void main() {
   vec2 p = gl_FragCoord.xy - uCenter;
   float d = roundedBox(p, uHalf, uRadius);
+
+  // Outer boundary antialiasing (smooth cutoff at outer edge)
+  float outerCutoff = 1.0 - smoothstep(-0.5, 0.5, d);
+  if (outerCutoff <= 0.001) {
+    outColor = vec4(0.0);
+    return;
+  }
+
   float position = loopPosition(p, uHalf, uRadius);
-  float key = lobe(position, uSpot);
-  float back = lobe(position, uSpot + 0.5);
-  float streak = key + back * 0.45;
-  float width = max(uThickness * uPx * mix(1.0, max(key, back), 0.6), 0.35);
-  float band = smoothstep(-width - 0.6, -width + 0.6, d) * (1.0 - smoothstep(-0.6, 0.6, d));
-  float hair = smoothstep(-uPx - 0.6, -uPx + 0.6, d) * (1.0 - smoothstep(-0.6, 0.6, d));
-  float inside = 1.0 - smoothstep(-0.6, 0.6, d);
-  vec2 pool = (p - uEntry) / (uHalf.y * vec2(1.6, 1.1));
-  float glow = streak * 0.2 * exp(-abs(d + width * 0.5) / (5.0 * uPx)) + inside * 0.08 * exp(-dot(pool, pool));
-  float light = clamp((band * streak + glow * uGlow) * uIntensity, 0.0, 1.0);
-  vec4 base = vec4(uBaseColor, 1.0) * hair * 0.6;
-  outColor = vec4(uLineColor, 1.0) * light + base * (1.0 - light);
+  
+  // Specular lobes: primary reflection plus subtle opposite rim reflection
+  float key = lobe(position, uSpot, uWindow.x, uWindow.y);
+  float back = lobe(position, uSpot + 0.5, uWindow.x * 1.2, uWindow.y * 1.2);
+  
+  // Refined specular glints: tighter, less overpowering, elegant shine
+  float specGlint = pow(key, 2.8);
+  float specCrest = pow(key, 8.0);
+  float backGlint = pow(back, 3.5) * 0.25;
+  
+  // Ring geometry
+  float ringWidth = max(uThickness * uPx * mix(1.0, key, 0.25), 1.1 * uPx);
+  float band = smoothstep(-ringWidth - 0.6, -ringWidth + 0.6, d) * (1.0 - smoothstep(-0.6, 0.6, d));
+  float rimHair = smoothstep(-uPx - 0.6, -uPx + 0.6, d) * (1.0 - smoothstep(-0.6, 0.6, d));
+  
+  // Polished metallic silver baseline color
+  vec3 silverBase = uBaseColor;
+  
+  // High-luminance specular shine transitioning into white at crest
+  vec3 shineColor = mix(uLineColor, vec3(1.0, 1.0, 1.0), specCrest * 0.9);
+  
+  // Ring glow strictly hugging the silver rim (subtle, non-blinding)
+  float ringDist = abs(d + ringWidth * 0.5);
+  float ringGlow = exp(-ringDist / (2.2 * uPx)) * (specGlint * 0.6 + specCrest * 0.8 + 0.04) * uGlow;
+  
+  // Total specular highlight along the ring
+  float shineIntensity = (band * (specGlint * 1.1 + specCrest * 1.4 + backGlint) + ringGlow) * uIntensity;
+  
+  // Composite the shining silver ring
+  vec3 ringColor = mix(silverBase, shineColor, clamp(specGlint * 1.2 + specCrest * 1.8, 0.0, 1.0));
+  float ringAlpha = clamp((band * 0.85 + rimHair * 0.35) + shineIntensity, 0.0, 1.0) * outerCutoff;
+  
+  // Refined specular white crest hotspot
+  vec3 finalRgb = ringColor * ringAlpha + vec3(1.0, 1.0, 1.0) * (specCrest * band * 0.35 * uIntensity);
+  
+  outColor = vec4(finalRgb, ringAlpha);
 }
 `;
 
@@ -167,7 +199,7 @@ const link = (gl: WebGL2RenderingContext) => {
 
 const parseColor = (color: string): [number, number, number] => {
   if (!color || color === 'transparent') return [1, 1, 1];
-  if (color.toLowerCase() === 'silver') return [210 / 255, 210 / 255, 210 / 255];
+  if (color.toLowerCase() === 'silver') return [216 / 255, 222 / 255, 228 / 255]; // Polished metallic silver #D8DEE4
   if (color.startsWith('#')) {
     let c = color.slice(1);
     if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
@@ -216,18 +248,18 @@ export const SpecularButton = ({
   tintOpacity = 1,
   blur = 0,
   textColor = '#0A0A31',
-  lineColor = '#D2D2D2',
-  baseColor = '#E2B87C',
-  intensity = 1.2,
-  idleIntensity = 0.35,
-  shineSize = 12,
-  shineFade = 36,
-  thickness = 1.4,
-  glow = 1.2,
-  speed = 0.35,
+  lineColor = '#FFFFFF',
+  baseColor = '#D8DEE4',
+  intensity = 1.05,
+  idleIntensity = 0.38,
+  shineSize = 7,
+  shineFade = 20,
+  thickness = 1.5,
+  glow = 0.85,
+  speed = 0.12,
   followMouse = true,
-  proximity = 250,
-  autoAnimate = false,
+  proximity = 75,
+  autoAnimate = true,
   disabled = false,
   onClick,
   onMouseEnter,
